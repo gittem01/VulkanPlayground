@@ -10,7 +10,10 @@
 #include "glm/gtx/transform.hpp"
 #include "glm/glm.hpp"
 #include "vk_swapchain.h"
+#include "vk_pipelinebuilder.h"
 
+#include <iostream>
+#include <fstream>
 #include <vector>
 #include <deque>
 #include <functional>
@@ -74,41 +77,6 @@ struct FrameData {
 	VkDescriptorSet objectDescriptor;
 };
 
-struct DeletionQueue
-{
-	std::deque<std::function<void()>> deletors;
-
-	void push_function(std::function<void()>&& function) {
-		deletors.push_back(function);
-	}
-
-	void flush() {
-		// reverse iterate the deletion queue to execute all the functions
-		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-			(*it)(); //call the function
-		}
-
-		deletors.clear();
-	}
-};
-
-class PipelineBuilder {
-public:
-	VulkanShader* shader;
-	std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-	VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
-	VkViewport _viewport;
-	VkRect2D _scissor;
-	VkPipelineRasterizationStateCreateInfo _rasterizer;
-	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-	VkPipelineMultisampleStateCreateInfo _multisampling;
-	VkPipelineLayout _pipelineLayout;
-	VkPipelineDepthStencilStateCreateInfo _depthStencil;
-
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
-};
-
 class VulkanEngine {
 public:
 	std::vector<RenderObject> _renderables;
@@ -116,7 +84,7 @@ public:
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
 	
-	SwapChain* sc;
+	SwapChain* _swapChain;
 
 	bool _isInitialized = false;
 	int _frameNumber = 0;

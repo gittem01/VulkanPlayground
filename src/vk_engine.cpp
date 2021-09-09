@@ -1,12 +1,6 @@
 ﻿#define VMA_IMPLEMENTATION
 
-#include <iostream>
-#include <fstream>
-
 #include "vk_engine.h"
-
-#include <SDL.h>
-#include <SDL_vulkan.h>
 
 #ifndef NDEBUG
 	#define IS_DEBUG 1
@@ -25,49 +19,6 @@
 
 float getRand01(){
 	return ((double)rand()) / RAND_MAX;
-}
-
-VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
-	VkPipelineViewportStateCreateInfo viewportState = {};
-	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-
-	viewportState.viewportCount = 1;
-	viewportState.pViewports = &_viewport;
-	viewportState.scissorCount = 1;
-	viewportState.pScissors = &_scissor;
-
-	VkPipelineColorBlendStateCreateInfo colorBlending = {};
-	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 1;
-	colorBlending.pAttachments = &_colorBlendAttachment;
-
-	VkGraphicsPipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.stageCount = _shaderStages.size();
-	pipelineInfo.pStages = _shaderStages.data();
-	pipelineInfo.pVertexInputState = &_vertexInputInfo;
-	pipelineInfo.pInputAssemblyState = &_inputAssembly;
-	pipelineInfo.pViewportState = &viewportState;
-	pipelineInfo.pRasterizationState = &_rasterizer;
-	pipelineInfo.pMultisampleState = &_multisampling;
-	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.layout = _pipelineLayout;
-	pipelineInfo.renderPass = pass;
-	pipelineInfo.subpass = 0;
-	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-	pipelineInfo.pDepthStencilState = &_depthStencil;
-
-	VkPipeline newPipeline;
-	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-		std::cout << "failed to create pipeline\n";
-		return VK_NULL_HANDLE; // failed to create graphics pipeline
-	}
-	else {
-		return newPipeline;
-	}
 }
 
 void VulkanEngine::run()
@@ -91,11 +42,11 @@ void VulkanEngine::init()
 
 	init_vulkan();
 
-	this->sc = new SwapChain((void*)this);
+	this->_swapChain = new SwapChain((void*)this);
 
 	init_default_renderpass();
 
-	sc->createFrameBuffers();
+	_swapChain->createFrameBuffers();
 	
 	init_commands();
 		
@@ -113,11 +64,6 @@ void VulkanEngine::init()
 }
 
 void VulkanEngine::windowResizeEvent(){
-	
-	int w, h;
-	SDL_Vulkan_GetDrawableSize(_window, &w, &h);
-	sc->extent.width = w;
-	sc->extent.height = h;
 
 	vkDeviceWaitIdle(_device);
 	vkDestroyCommandPool(_device, _uploadContext._commandPool, nullptr);
@@ -139,16 +85,14 @@ void VulkanEngine::windowResizeEvent(){
 
 	vmaDestroyBuffer(_allocator, _worldBuffers._buffer , _worldBuffers._allocation);
 
-	sc->destroy();
-	sc->create();
+	_swapChain->destroy();
+	_swapChain->create();
 	
 	init_commands();
 	init_default_renderpass();
-	sc->createFrameBuffers();
+	_swapChain->createFrameBuffers();
 	init_descriptors();
 	init_pipelines();
-
-	vkDeviceWaitIdle(_device);
 }
 
 void VulkanEngine::cleanup(){
@@ -181,7 +125,7 @@ void VulkanEngine::cleanup(){
 			vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
 		}
 
-		sc->destroy();
+		_swapChain->destroy();
 
 		vkDestroyRenderPass(_device, _renderPass, nullptr);
 
@@ -207,18 +151,12 @@ void VulkanEngine::cleanup(){
 	}
 }
 
-void printWindowSize(int x, SDL_Window* window){
-	int w, h;
-	SDL_GetWindowSize(window, &w, &h);
-	printf("%d, %d, %d\n", x, w, h);
-}
-
 void VulkanEngine::draw()
 {
-	// Wait until the GPU has finished rendering the last frame. Timeout of 1 second
+	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 
 	uint32_t swapchainImageIndex;
-	VkResult result = vkAcquireNextImageKHR(_device, sc->swapChain, UINT64_MAX, get_current_frame()._presentSemaphore, nullptr, &swapchainImageIndex);
+	VkResult result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX, get_current_frame()._presentSemaphore, nullptr, &swapchainImageIndex);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		windowResizeEvent();
@@ -251,8 +189,8 @@ void VulkanEngine::draw()
 	rpInfo.renderPass = _renderPass;
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
-	rpInfo.renderArea.extent = sc->extent;
-	rpInfo.framebuffer = sc->framebuffers[swapchainImageIndex];
+	rpInfo.renderArea.extent = _swapChain->extent;
+	rpInfo.framebuffer = _swapChain->framebuffers[swapchainImageIndex];
 
 	rpInfo.clearValueCount = 2;
 
@@ -288,7 +226,7 @@ void VulkanEngine::draw()
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.pNext = nullptr;
-	presentInfo.pSwapchains = &sc->swapChain;
+	presentInfo.pSwapchains = &_swapChain->swapChain;
 	presentInfo.swapchainCount = 1;
 
 	presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
@@ -356,7 +294,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	{
 		RenderObject& object = first[i];
 
-		//only bind the pipeline if it doesn't match with the already bound one
 		if (object.material != lastMaterial) {
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
@@ -365,7 +302,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			uint32_t uniform_offset1 = fullSize * frameIndex;
 			uint32_t uniform_offset2 = uniform_offset1 + pad_uniform_buffer_size(sizeof(GPUCameraData));
 			uint32_t uniform_offsets[] = { uniform_offset1, uniform_offset2 };
-			//bind the descriptor set when changing pipeline
+
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 
 				0, 1, &_globalDescriptor, 2, uniform_offsets);
 
@@ -373,7 +310,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 				1, 1, &get_current_frame().objectDescriptor, 0, nullptr);
 		}
 
-		//only bind the mesh if it's a different one from last bind
 		if (object.mesh != lastMesh) {
 			VkDeviceSize offset = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
@@ -387,7 +323,6 @@ void VulkanEngine::init_vulkan()
 {
 	vkb::InstanceBuilder builder;
 
-	//make the Vulkan instance, with basic debug features
 	auto inst_ret = builder.set_app_name("AppX")
 		.request_validation_layers(IS_DEBUG)
 		.require_api_version(1, 1, 0);
@@ -410,7 +345,6 @@ void VulkanEngine::init_vulkan()
 	_debug_messenger = nullptr;
 #endif
 	
-	// get the surface of the window we opened with SDL
 	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 		
 	VkPhysicalDeviceFeatures features = {};
@@ -418,19 +352,18 @@ void VulkanEngine::init_vulkan()
 	features.wideLines = VK_TRUE;
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
-		.set_minimum_version(1, 2)
+		.set_minimum_version(1, 1) // 1.1 for compatibility. Will be changed to latest later
 		.set_surface(_surface)
-		.set_required_features(features).prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
+		.set_required_features(features)
 		.select()
 		.value();
 
-	//.prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
-	//create the final Vulkan device
+	// .prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
+
 	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 	
 	vkb::Device vkbDevice = deviceBuilder.build().value();
 	
-	// Get the VkDevice handle used in the rest of a Vulkan application
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
 
@@ -439,11 +372,9 @@ void VulkanEngine::init_vulkan()
 	std::cout << "The GPU has a minimum buffer alignment of " << 
 	_GPUProperties.limits.minUniformBufferOffsetAlignment << "\n\n";
 	
-	// use vkbootstrap to get a Graphics queue
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 	
-	//initialize the memory allocator
 	VmaAllocatorCreateInfo allocatorInfo = {};
 	allocatorInfo.physicalDevice = _chosenGPU;
 	allocatorInfo.device = _device;
@@ -471,7 +402,7 @@ void VulkanEngine::init_commands()
 void VulkanEngine::init_default_renderpass()
 {
 	VkAttachmentDescription color_attachment = {};
-	color_attachment.format = sc->swapchainImageFormat;
+	color_attachment.format = _swapChain->swapchainImageFormat;
 	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -487,7 +418,7 @@ void VulkanEngine::init_default_renderpass()
 
 	VkAttachmentDescription depth_attachment = {};
 	depth_attachment.flags = 0;
-	depth_attachment.format = sc->depthFormat;
+	depth_attachment.format = _swapChain->depthFormat;
 	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -519,7 +450,6 @@ void VulkanEngine::init_default_renderpass()
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
 }
-
 
 void VulkanEngine::init_sync_structures()
 {
@@ -648,7 +578,7 @@ void VulkanEngine::init_descriptors()
 
 size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 {
-	// Calculate required alignment based on minimum device offset alignment
+	// calculate required alignment based on minimum device offset alignment
 	size_t minUboAlignment = _GPUProperties.limits.minUniformBufferOffsetAlignment;
 	size_t alignedSize = originalSize;
 	if (minUboAlignment > 0) {
@@ -676,16 +606,16 @@ void VulkanEngine::init_pipelines() {
 
 	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
-	//build viewport and scissor from the swapchain extents
+	// build viewport and scissor from the swapchain extents
 	pipelineBuilder._viewport.x = 0.0f;
 	pipelineBuilder._viewport.y = 0.0f;
-	pipelineBuilder._viewport.width = (float)sc->extent.width;
-	pipelineBuilder._viewport.height = (float)sc->extent.height;
+	pipelineBuilder._viewport.width = (float)_swapChain->extent.width;
+	pipelineBuilder._viewport.height = (float)_swapChain->extent.height;
 	pipelineBuilder._viewport.minDepth = 0.0f;
 	pipelineBuilder._viewport.maxDepth = 1.0f;
 
 	pipelineBuilder._scissor.offset = { 0, 0 };
-	pipelineBuilder._scissor.extent = sc->extent;
+	pipelineBuilder._scissor.extent = _swapChain->extent;
 
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 
@@ -709,7 +639,7 @@ void VulkanEngine::init_pipelines() {
 	create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
 }
 
-void VulkanEngine::load_meshes()
+void VulkanEngine::load_meshes() // Mesh handling will be done in a Mesh class in the future
 {
 	Mesh m;
 	m.load_from_obj("../assets/monkey_flat.obj");
@@ -749,7 +679,7 @@ void VulkanEngine::init_scene()
 void VulkanEngine::upload_mesh(Mesh& mesh)
 {
 	const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
-	//allocate staging buffer
+	// allocate staging buffer
 	VkBufferCreateInfo stagingBufferInfo = {};
 	stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	stagingBufferInfo.pNext = nullptr;
@@ -757,13 +687,13 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	stagingBufferInfo.size = bufferSize;
 	stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-	//let the VMA library know that this data should be on CPU RAM
+	// let the VMA library know that this data should be on CPU RAM
 	VmaAllocationCreateInfo vmaallocInfo = {};
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 
 	AllocatedBuffer stagingBuffer;
 
-	//allocate the buffer
+	// allocate the buffer
 	VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo,
 		&stagingBuffer._buffer, &stagingBuffer._allocation, nullptr)
 	);
@@ -775,19 +705,15 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 
 	vmaUnmapMemory(_allocator, stagingBuffer._allocation);
 
-	//allocate vertex buffer
 	VkBufferCreateInfo vertexBufferInfo = {};
 	vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	vertexBufferInfo.pNext = nullptr;
-	//this is the total size, in bytes, of the buffer we are allocating
 	vertexBufferInfo.size = bufferSize;
-	//this buffer is going to be used as a Vertex Buffer
 	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-	//let the VMA library know that this data should be GPU native
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-	//allocate the buffer
+	// allocate the buffer
 	VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo,
 		&mesh._vertexBuffer._buffer, &mesh._vertexBuffer._allocation, nullptr)
 	);
@@ -800,7 +726,6 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
 	});
 
-	//add the destruction of mesh buffer to the deletion queue
 	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }
 
@@ -839,7 +764,6 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
 	AllocatedBuffer newBuffer;
 	
-	//allocate the buffer
 	VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
 		&newBuffer._buffer,
 		&newBuffer._allocation,
@@ -860,7 +784,6 @@ Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout la
 
 Material* VulkanEngine::get_material(const std::string& name)
 {
-	//search for the object, and return nullptr if not found
 	auto it = _materials.find(name);
 	if (it == _materials.end()) {
 		return NULL;

@@ -29,6 +29,7 @@ add_executable	(YearsAndYearsP "src/main.cpp"
 								"src/Camera3D.h" "src/Camera3D.cpp"
 								"src/WindowHandler.h" "src/WindowHandler.cpp"
 								"src/vk_swapchain.h" "src/vk_swapchain.cpp"
+								"src/vk_pipelinebuilder.h"
 				)
 
 target_link_libraries(YearsAndYearsP SDL2main)

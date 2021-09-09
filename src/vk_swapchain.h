@@ -27,7 +27,7 @@ public:
     void create();
     void destroy();
 
-    void createFrameBuffers();
+    void createFrameBuffers(); // need to be created after renderpass, hence seperate
 
 private:
     void* engine;

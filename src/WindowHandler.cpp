@@ -5,7 +5,6 @@ WindowHandler::WindowHandler(int w, int h) {
     this->massInit(w, h);
 }
 
-
 void WindowHandler::massInit(int w, int h) {
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -30,7 +29,7 @@ void WindowHandler::clearMouseData() {
 }
 
 void WindowHandler::clearKeyData() {
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < KEYMAX; i++) {
         if (keyData[i] == 2) {
             keyData[i] = 1;
         }
@@ -67,7 +66,7 @@ int WindowHandler::looper() {
             break;
         
         case SDL_WINDOWEVENT:
-            cEvent.window.event; // one of SDL_WindowEventID      
+            cEvent.window.event; // one of SDL_WindowEventID (later use)
             break;
         
         default:
@@ -80,9 +79,7 @@ int WindowHandler::looper() {
 
     lastMousePos[0] = mouseData[0];
     lastMousePos[1] = mouseData[1];
-    if (keyData[SDL_SCANCODE_R] && rand() % 10 > 8){
-        SDL_SetWindowSize(window, rand() % 300 + 1300, rand() % 300 + 400);
-    }
+
     return 1;
 }
 
@@ -109,14 +106,8 @@ void WindowHandler::keyEventCallback(int key, int scancode, int action)
 {
     if (action == SDL_KEYDOWN) {
         this->keyData[key] = 2;
-        if (key == SDL_SCANCODE_O){
-            SDL_SetWindowSize(window, 1500, 600);
-        }
     }
     else if (action == SDL_KEYUP) {
         this->keyData[key] = 0;
-        if (key == SDL_SCANCODE_O){
-            SDL_SetWindowSize(window, 1500, 800);
-        }
     }
 }

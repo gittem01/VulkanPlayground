@@ -38,7 +38,7 @@ void SwapChain::create(){
     swapChainCreateInfo.clipped = VK_TRUE;
 
     if (vkCreateSwapchainKHR(vulkanEngine->_device, &swapChainCreateInfo, nullptr, &swapChain) != VK_SUCCESS) {
-        printf("SwapChain creation error\n");
+        printf("SwapChain creation error\n"); 
     }
 
     createImageResources();

@@ -8,11 +8,13 @@
 #include <iostream>
 #include <glm/glm.hpp>
 
+#define KEYMAX 512
+
 class WindowHandler
 {
 public:
 	int* mouseData = (int*)calloc(6, sizeof(int));
-	int* keyData = (int*)calloc(512, sizeof(int));
+	int* keyData = (int*)calloc(KEYMAX, sizeof(int));
 
 	int* lastMousePos = (int*)calloc(2, sizeof(int));
 	int* moveDiff = (int*)calloc(2, sizeof(int));
