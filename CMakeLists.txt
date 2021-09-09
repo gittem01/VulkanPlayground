@@ -1,7 +1,8 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
-project (YearsAndYearsP)
+project (VulkanPlayground)
 
+set (CMAKE_CXX_STANDARD 17)
 
 add_subdirectory ("third_party/SDL")
 include_directories("third_party/SDL/include")
@@ -20,7 +21,7 @@ add_subdirectory("third_party/VulkanMemoryAllocator")
 
 link_directories("third_party/vulkan/lib")
 
-add_executable	(YearsAndYearsP "src/main.cpp"
+add_executable	(VulkanPlayground "src/main.cpp"
 								"src/vk_engine.cpp" "src/vk_engine.h"
 								"src/vk_initializers.cpp" "src/vk_initializers.h"
 								"src/vk_mesh.h" "src/vk_mesh.cpp"
@@ -32,14 +33,16 @@ add_executable	(YearsAndYearsP "src/main.cpp"
 								"src/vk_pipelinebuilder.h"
 				)
 
-target_link_libraries(YearsAndYearsP SDL2main)
-target_link_libraries(YearsAndYearsP SDL2-static)
-target_link_libraries(YearsAndYearsP VulkanMemoryAllocator)
-target_link_libraries(YearsAndYearsP vk-bootstrap)
+target_link_libraries(VulkanPlayground SDL2main)
+target_link_libraries(VulkanPlayground SDL2-static)
+target_link_libraries(VulkanPlayground VulkanMemoryAllocator)
+target_link_libraries(VulkanPlayground vk-bootstrap)
 
 
 if (UNIX)
-	target_link_libraries(YearsAndYearsP vulkanUnx)
+	target_link_libraries(VulkanPlayground vulkanUnx)
 elseif(WIN32)
-	target_link_libraries(YearsAndYearsP vulkanWin)
+	target_link_libraries(VulkanPlayground vulkanWin)
 endif()
+
+target_compile_definitions(VulkanPlayground PUBLIC BASE_DIR="${CMAKE_SOURCE_DIR}")

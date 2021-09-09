@@ -33,7 +33,7 @@ VertexInputDescription Vertex::get_vertex_description()
 	return description;
 }
 
-bool Mesh::load_from_obj(const char* filename)
+bool Mesh::load_from_obj(std::string& fileName)
 {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -41,7 +41,7 @@ bool Mesh::load_from_obj(const char* filename)
 
 	std::string warn;
 	std::string err;
-	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr);
+	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str(), nullptr);
 	if (!warn.empty()) {
 		//std::cout << "WARN: " << warn << std::endl;
 	}

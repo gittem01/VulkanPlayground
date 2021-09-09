@@ -1,4 +1,5 @@
 #include "vk_engine.h"
+#include <algorithm>
 
 SwapChain::SwapChain(void* engine){
 
@@ -31,6 +32,7 @@ void SwapChain::create(){
     swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapChainCreateInfo.imageArrayLayers = 1;
+    swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapChainCreateInfo.preTransform = swapChainSupport.capabilities.currentTransform;
     swapChainCreateInfo.imageFormat = surfaceFormat.format;
     swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -185,12 +187,12 @@ VkSurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfac
 
 VkPresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
     for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+        if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) {
             return availablePresentMode;
         }
     }
 
-    return VK_PRESENT_MODE_FIFO_KHR;
+    return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
 VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {

@@ -1,6 +1,7 @@
 ﻿#define VMA_IMPLEMENTATION
 
 #include "vk_engine.h"
+#include <string>
 
 #ifndef NDEBUG
 	#define IS_DEBUG 1
@@ -589,8 +590,10 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 
 void VulkanEngine::init_pipelines() {
 	PipelineBuilder pipelineBuilder;
-
-	const char* fileNames[] = { "../shaders/triangle.vert.spv", "../shaders/triangle.frag.spv" };
+	
+	std::string fileNames[] = { std::string(BASE_DIR) + std::string("/shaders/triangle.vert.spv"), 
+								std::string(BASE_DIR) + std::string("/shaders/triangle.frag.spv") };
+	
 	VulkanShader vulkanShader = VulkanShader(_device, fileNames, 2);
 	pipelineBuilder._shaderStages = vulkanShader.shaderStages;
 
@@ -618,7 +621,7 @@ void VulkanEngine::init_pipelines() {
 	pipelineBuilder._scissor.extent = _swapChain->extent;
 
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-
+	
 	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
 
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
@@ -642,7 +645,7 @@ void VulkanEngine::init_pipelines() {
 void VulkanEngine::load_meshes() // Mesh handling will be done in a Mesh class in the future
 {
 	Mesh m;
-	m.load_from_obj("../assets/monkey_flat.obj");
+	m.load_from_obj(std::string(BASE_DIR) + std::string("/assets/monkey_flat.obj"));
 
 	upload_mesh(m);
 
