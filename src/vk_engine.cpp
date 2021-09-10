@@ -645,7 +645,8 @@ void VulkanEngine::init_pipelines() {
 void VulkanEngine::load_meshes() // Mesh handling will be done in a Mesh class in the future
 {
 	Mesh m;
-	m.load_from_obj(std::string(BASE_DIR) + std::string("/assets/monkey_flat.obj"));
+	std::string s = std::string(BASE_DIR) + std::string("/assets/monkey_flat.obj");
+	m.load_from_obj(s);
 
 	upload_mesh(m);
 
