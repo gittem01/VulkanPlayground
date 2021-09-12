@@ -48,6 +48,24 @@ void SwapChain::create(){
     createDepthResources();
 }
 
+void SwapChain::creationLoop() {
+    VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
+
+    for (;;) {
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
+        extent = chooseSwapExtent(swapChainSupport.capabilities);
+        int w = extent.width; int h = extent.height;
+        if (w > 0 && h > 0) {
+            create();
+            return;
+        }
+        else {
+            SDL_Event cEvent;
+            while (SDL_PollEvent(&cEvent)) {}
+        }
+    }
+}
+
 void SwapChain::destroy(){
     VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
 
@@ -131,11 +149,9 @@ void SwapChain::createFrameBuffers(){
 	fb_info.height = extent.height;
 	fb_info.layers = 1;
 
-	//grab how many images we have in the swapchain
 	const uint32_t swapchain_imagecount = swapchainImages.size();
 	framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
-	//create framebuffers for each of the swapchain image views
 	for (int i = 0; i < swapchain_imagecount; i++) {
 
 		VkImageView attachments[2];

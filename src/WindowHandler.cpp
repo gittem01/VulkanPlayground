@@ -40,7 +40,7 @@ int WindowHandler::looper() {
     clearMouseData();
     clearKeyData();
 
-    SDL_Event cEvent; // Current event
+    SDL_Event cEvent; // current event
     while (SDL_PollEvent(&cEvent)) {
         switch (cEvent.type)
         {

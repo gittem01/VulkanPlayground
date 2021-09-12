@@ -66,15 +66,14 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 	info.pNext = nullptr;
 
 	info.depthClampEnable = VK_FALSE;
-	//discards all primitives before the rasterization stage if enabled which we don't want
 	info.rasterizerDiscardEnable = VK_FALSE;
 	
 	info.polygonMode = polygonMode;
 	info.lineWidth = 2.0f;
-	//no backface cull
-	info.cullMode = VK_CULL_MODE_NONE;
+	
+	info.cullMode = VK_CULL_MODE_FRONT_BIT;
 	info.frontFace = VK_FRONT_FACE_CLOCKWISE;
-	//no depth bias
+
 	info.depthBiasEnable = VK_FALSE;
 	info.depthBiasConstantFactor = 0.0f;
 	info.depthBiasClamp = 0.0f;
@@ -89,7 +88,7 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
 	info.pNext = nullptr;
 
 	info.sampleShadingEnable = VK_FALSE;
-	//multisampling defaulted to no multisampling (1 sample per pixel)
+	// multisampling defaulted to no multisampling (1 sample per pixel)
 	info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 	info.minSampleShading = 1.0f;
 	info.pSampleMask = nullptr;
@@ -118,7 +117,7 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	info.pNext = nullptr;
 
-	//empty defaults
+	// empty defaults
 	info.flags = 0;
 	info.setLayoutCount = 0;
 	info.pSetLayouts = nullptr;

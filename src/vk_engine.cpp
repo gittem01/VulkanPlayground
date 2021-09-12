@@ -87,7 +87,7 @@ void VulkanEngine::windowResizeEvent(){
 	vmaDestroyBuffer(_allocator, _worldBuffers._buffer , _worldBuffers._allocation);
 
 	_swapChain->destroy();
-	_swapChain->create();
+	_swapChain->creationLoop();
 	
 	init_commands();
 	init_default_renderpass();

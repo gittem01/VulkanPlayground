@@ -26,6 +26,7 @@ public:
 
     void create();
     void destroy();
+    void creationLoop();
 
     void createFrameBuffers(); // need to be created after renderpass, hence seperate
 
