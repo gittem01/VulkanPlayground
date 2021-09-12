@@ -40,6 +40,19 @@ int WindowHandler::looper() {
     clearMouseData();
     clearKeyData();
 
+    int res = eventHandler();
+    if (!res) return 0;
+
+    moveDiff[0] = mouseData[0] - lastMousePos[0];
+    moveDiff[1] = mouseData[1] - lastMousePos[1];
+
+    lastMousePos[0] = mouseData[0];
+    lastMousePos[1] = mouseData[1];
+
+    return 1;
+}
+
+int WindowHandler::eventHandler() {
     SDL_Event cEvent; // current event
     while (SDL_PollEvent(&cEvent)) {
         switch (cEvent.type)
@@ -64,21 +77,15 @@ int WindowHandler::looper() {
         case SDL_KEYUP:
             keyEventCallback(cEvent.key.keysym.scancode, 0, cEvent.key.type);
             break;
-        
+
         case SDL_WINDOWEVENT:
-            cEvent.window.event; // one of SDL_WindowEventID (later use)
+            windowEventCallBack(cEvent);
             break;
-        
+
         default:
             break;
         }
     }
-
-    moveDiff[0] = mouseData[0] - lastMousePos[0];
-    moveDiff[1] = mouseData[1] - lastMousePos[1];
-
-    lastMousePos[0] = mouseData[0];
-    lastMousePos[1] = mouseData[1];
 
     return 1;
 }
@@ -90,11 +97,18 @@ void WindowHandler::mouseMovementEventCallback(double xpos, double ypos)
 }
 
 void WindowHandler::mouseButtonEventCallback(int button, int action) {
-    if (action == SDL_MOUSEBUTTONDOWN) {
+    switch (action)
+    {
+    case SDL_MOUSEBUTTONDOWN:
         this->mouseData[button + 1] = 2;
-    }
-    else if (action == SDL_MOUSEBUTTONUP) {
+        break;
+
+    case SDL_MOUSEBUTTONUP:
         this->mouseData[button + 1] = 0;
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -104,10 +118,36 @@ void WindowHandler::scrollEventCallback(double xoffset, double yoffset) {
 
 void WindowHandler::keyEventCallback(int key, int scancode, int action)
 {
-    if (action == SDL_KEYDOWN) {
+    switch (action)
+    {
+    case SDL_KEYDOWN:
         this->keyData[key] = 2;
-    }
-    else if (action == SDL_KEYUP) {
+        break;
+
+    case SDL_KEYUP:
         this->keyData[key] = 0;
+        break;
+
+    default:
+        break;
+    }
+}
+
+void WindowHandler::windowEventCallBack(SDL_Event wEvent) {
+    switch (wEvent.window.event)
+    {
+    case SDL_WINDOWEVENT_MINIMIZED:
+        for (int i = 0; i < MOUSEMAX; i++) {
+            mouseData[i] = 0;
+        }
+
+        for (int i = 0; i < KEYMAX; i++) {
+            keyData[i] = 0;
+        }
+
+        break;
+
+    default:
+        break;
     }
 }

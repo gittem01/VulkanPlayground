@@ -154,8 +154,6 @@ void VulkanEngine::cleanup(){
 
 void VulkanEngine::draw()
 {
-	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
-
 	uint32_t swapchainImageIndex;
 	VkResult result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX, get_current_frame()._presentSemaphore, nullptr, &swapchainImageIndex);
 
@@ -653,7 +651,7 @@ void VulkanEngine::load_meshes() // Mesh handling will be done in a Mesh class i
 	_meshes["mesh"] = m;
 }
 
-void VulkanEngine::init_scene()
+void VulkanEngine::init_scene() // temporary
 {
 	RenderObject monkey;
 	monkey.mesh = get_mesh("mesh");
@@ -663,9 +661,9 @@ void VulkanEngine::init_scene()
 
 	_renderables.push_back(monkey);
 
-	for (int x = -10; x <= 10; x++) {
-		for (int y = -10; y <= 10; y++) {
-
+	int n = 10;
+	for (int x = -n; x <= n; x++) {
+		for (int y = -n; y <= n; y++) {
 			RenderObject tri;
 			tri.mesh = get_mesh("mesh");
 			tri.material = get_material("defaultmesh");
@@ -691,7 +689,6 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 	stagingBufferInfo.size = bufferSize;
 	stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-	// let the VMA library know that this data should be on CPU RAM
 	VmaAllocationCreateInfo vmaallocInfo = {};
 	vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 

@@ -144,7 +144,7 @@ void Camera3D::updateLookDir() {
 
 void Camera3D::rotateFunc()
 {
-	if (wp->mouseData[3] && !wp->keyData[SDL_SCANCODE_LSHIFT]) {
+	if (wp->mouseData[3] && (!wp->keyData[SDL_SCANCODE_LSHIFT] || cameraType == WALKER)) {
 		rotAim.x += wp->moveDiff[1] * 0.002f;
 		rotAim.y += wp->moveDiff[0] * 0.002f;
 	}

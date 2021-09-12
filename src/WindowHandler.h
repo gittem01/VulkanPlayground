@@ -8,12 +8,13 @@
 #include <iostream>
 #include <glm/glm.hpp>
 
+#define MOUSEMAX 6
 #define KEYMAX 512
 
 class WindowHandler
 {
 public:
-	int* mouseData = (int*)calloc(6, sizeof(int));
+	int* mouseData = (int*)calloc(MOUSEMAX, sizeof(int));
 	int* keyData = (int*)calloc(KEYMAX, sizeof(int));
 
 	int* lastMousePos = (int*)calloc(2, sizeof(int));
@@ -22,12 +23,11 @@ public:
 
 	SDL_Window* window;
 
-	int current_pos = 0;
-
 	WindowHandler(int w, int h);
 
 	void massInit(int w, int h);
 	int looper();
+	int eventHandler();
 	void clearMouseData();
 	void clearKeyData();
 	void imRender(); // TODO
@@ -35,6 +35,7 @@ public:
 	void mouseButtonEventCallback(int, int);
 	void scrollEventCallback(double, double);
 	void keyEventCallback(int key, int scancode, int action);
+	void windowEventCallBack(SDL_Event wEvent);
 	void windowSizeEventCallback(int, int);
 
 private:
