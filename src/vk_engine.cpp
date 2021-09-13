@@ -1,4 +1,5 @@
 ﻿#define VMA_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 
 #include "vk_engine.h"
 #include <string>
@@ -28,7 +29,7 @@ void VulkanEngine::run()
 
 	while (!done)
 	{
-		if (!painter->looper()) done = true;
+		if (!wHandler->looper()) done = true;
 		camera->update();
 		draw();
 	}
@@ -36,10 +37,10 @@ void VulkanEngine::run()
 
 void VulkanEngine::init()
 {
-	painter = new WindowHandler(_windowExtent.width, _windowExtent.height);
-	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), painter);
+	wHandler = new WindowHandler(_windowExtent.width, _windowExtent.height);
+	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
 
-	_window = painter->window;
+	_window = wHandler->window;
 
 	init_vulkan();
 
@@ -58,6 +59,8 @@ void VulkanEngine::init()
 	init_pipelines();
 
 	load_meshes();
+	
+	load_images();
 	
 	init_scene();
 
@@ -307,6 +310,11 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
 				1, 1, &get_current_frame().objectDescriptor, 0, nullptr);
+
+			if (object.material->textureSet != VK_NULL_HANDLE) {
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, 
+					&object.material->textureSet, 0, nullptr);
+			}
 		}
 
 		if (object.mesh != lastMesh) {
@@ -479,6 +487,7 @@ void VulkanEngine::init_descriptors()
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 },
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {};
@@ -498,15 +507,18 @@ void VulkanEngine::init_descriptors()
 	VkDescriptorSetLayoutBinding sceneBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 
 		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);
 
-	VkDescriptorSetLayoutCreateInfo setInfo = {};
-	setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	setInfo.pNext = nullptr;
-	setInfo.bindingCount = 2;
-	setInfo.flags = 0;
+	VkDescriptorSetLayoutCreateInfo set1Info = {};
+	set1Info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	set1Info.pNext = nullptr;
+	set1Info.bindingCount = 2;
+	set1Info.flags = 0;
 	VkDescriptorSetLayoutBinding bindings[] = { cameraBind, sceneBind };
-	setInfo.pBindings = bindings;
+	set1Info.pBindings = bindings;
 
-	vkCreateDescriptorSetLayout(_device, &setInfo, nullptr, &_globalSetLayout);
+	vkCreateDescriptorSetLayout(_device, &set1Info, nullptr, &_globalSetLayout);
+
+	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+		VK_SHADER_STAGE_FRAGMENT_BIT, 0);
 
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.pNext = nullptr;
@@ -539,14 +551,27 @@ void VulkanEngine::init_descriptors()
 
 	VkDescriptorSetLayoutBinding objectBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-	VkDescriptorSetLayoutCreateInfo set2info = {};
-	set2info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set2info.pNext = nullptr;
-	set2info.bindingCount = 1;
-	set2info.flags = 0;
-	set2info.pBindings = &objectBind;
 
-	vkCreateDescriptorSetLayout(_device, &set2info, nullptr, &_objectSetLayout);
+	{ // set 2
+		VkDescriptorSetLayoutCreateInfo set2info = {};
+		set2info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		set2info.pNext = nullptr;
+		set2info.bindingCount = 1;
+		set2info.flags = 0;
+		set2info.pBindings = &objectBind;
+		vkCreateDescriptorSetLayout(_device, &set2info, nullptr, &_objectSetLayout);
+	}
+
+	{ // set 3
+		VkDescriptorSetLayoutCreateInfo set3info = {};
+		set3info.bindingCount = 1;
+		set3info.flags = 0;
+		set3info.pNext = nullptr;
+		set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		set3info.pBindings = &textureBind;
+		vkCreateDescriptorSetLayout(_device, &set3info, nullptr, &_singleTextureSetLayout); 
+	}
+	
 
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
@@ -589,8 +614,8 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 void VulkanEngine::init_pipelines() {
 	PipelineBuilder pipelineBuilder;
 	
-	std::string fileNames[] = { std::string(BASE_DIR) + std::string("/shaders/triangle.vert.spv"), 
-								std::string(BASE_DIR) + std::string("/shaders/triangle.frag.spv") };
+	std::string fileNames[] = { std::string(BASE_DIR) + std::string("/shaders/default.vert.spv"), 
+								std::string(BASE_DIR) + std::string("/shaders/default.frag.spv") };
 	
 	VulkanShader vulkanShader = VulkanShader(_device, fileNames, 2);
 	pipelineBuilder._shaderStages = vulkanShader.shaderStages;
@@ -628,8 +653,8 @@ void VulkanEngine::init_pipelines() {
 
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
 
-	VkDescriptorSetLayout setLayouts[] = { _globalSetLayout, _objectSetLayout };
-	mesh_pipeline_layout_info.setLayoutCount = 2;
+	VkDescriptorSetLayout setLayouts[] = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
+	mesh_pipeline_layout_info.setLayoutCount = 3;
 	mesh_pipeline_layout_info.pSetLayouts = setLayouts;
 
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
@@ -640,7 +665,19 @@ void VulkanEngine::init_pipelines() {
 	create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
 }
 
-void VulkanEngine::load_meshes() // Mesh handling will be done in a Mesh class in the future
+void VulkanEngine::load_images()
+{
+	Texture tex; // texture handling will be done in a separate class in the future
+	std::string s = std::string(BASE_DIR) + std::string("/assets/monkey.png");
+	load_image(s, tex.image);
+
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, tex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	vkCreateImageView(_device, &imageinfo, nullptr, &tex.imageView);
+
+	_loadedTextures["monkey"] = tex;
+}
+
+void VulkanEngine::load_meshes() // mesh handling will be done in a separate class in the future
 {
 	Mesh m;
 	std::string s = std::string(BASE_DIR) + std::string("/assets/monkey_flat.obj");
@@ -653,6 +690,11 @@ void VulkanEngine::load_meshes() // Mesh handling will be done in a Mesh class i
 
 void VulkanEngine::init_scene() // temporary
 {
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+
+	VkSampler blockySampler;
+	vkCreateSampler(_device, &samplerInfo, nullptr, &blockySampler);
+
 	RenderObject monkey;
 	monkey.mesh = get_mesh("mesh");
 	monkey.material = get_material("defaultmesh");
@@ -660,6 +702,25 @@ void VulkanEngine::init_scene() // temporary
 	monkey.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	_renderables.push_back(monkey);
+
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.pNext = nullptr;
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = _descriptorPool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &_singleTextureSetLayout;
+
+	vkAllocateDescriptorSets(_device, &allocInfo, &monkey.material->textureSet);
+
+	//write to the descriptor set so that it points to our empire_diffuse texture
+	VkDescriptorImageInfo imageBufferInfo;
+	imageBufferInfo.sampler = blockySampler;
+	imageBufferInfo.imageView = _loadedTextures["monkey"].imageView;
+	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, monkey.material->textureSet, &imageBufferInfo, 0);
+
+	vkUpdateDescriptorSets(_device, 1, &texture1, 0, nullptr);
 
 	int n = 10;
 	for (int x = -n; x <= n; x++) {
@@ -803,4 +864,102 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 	else {
 		return &(*it).second;
 	}
+}
+
+bool VulkanEngine::load_image(std::string fileName, AllocatedImage& outImage)
+{
+	int width, height, nChannels;
+	stbi_uc* pixels = stbi_load(fileName.c_str(), &width, &height, &nChannels, STBI_rgb_alpha);
+
+	if (!pixels) {
+		std::cout << "Failed to load texture file: " << fileName << std::endl;
+		return false;
+	}
+
+	void* pixel_ptr = pixels;
+	VkDeviceSize imageSize = width * height * (uint64_t)4;
+
+	VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
+
+	AllocatedBuffer stagingBuffer = create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
+	void* data;
+	vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
+
+	memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
+
+	vmaUnmapMemory(_allocator, stagingBuffer._allocation);
+	stbi_image_free(pixels);
+
+	VkExtent3D imageExtent;
+	imageExtent.width = static_cast<uint32_t>(width);
+	imageExtent.height = static_cast<uint32_t>(height);
+	imageExtent.depth = 1;
+
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(image_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+
+	AllocatedImage newImage;
+
+	VmaAllocationCreateInfo dimg_allocinfo = {};
+	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &newImage._image, &newImage._allocation, nullptr);
+
+	immediate_submit([&](VkCommandBuffer cmd) {
+		VkImageSubresourceRange range;
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = 0;
+		range.levelCount = 1;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
+
+		VkImageMemoryBarrier imageBarrier_toTransfer = {};
+		imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+		imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier_toTransfer.image = newImage._image;
+		imageBarrier_toTransfer.subresourceRange = range;
+
+		imageBarrier_toTransfer.srcAccessMask = 0;
+		imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		// barrier the image into the transfer-receive layout
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
+			nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
+
+		VkBufferImageCopy copyRegion = {};
+		copyRegion.bufferOffset = 0;
+		copyRegion.bufferRowLength = 0;
+		copyRegion.bufferImageHeight = 0;
+
+		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.imageSubresource.mipLevel = 0;
+		copyRegion.imageSubresource.baseArrayLayer = 0;
+		copyRegion.imageSubresource.layerCount = 1;
+		copyRegion.imageExtent = imageExtent;
+
+		// copy the buffer into the image
+		vkCmdCopyBufferToImage(cmd, stagingBuffer._buffer, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+		VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+
+		imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		//barrier the image into the shader readable layout
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, 
+			nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+	});
+
+	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+
+	std::cout << "Texture file: " << fileName << " loaded successfully " << std::endl;
+
+	outImage = newImage;
+
+	return true;
 }

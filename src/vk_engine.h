@@ -11,6 +11,7 @@
 #include "glm/glm.hpp"
 #include "vk_swapchain.h"
 #include "vk_pipelinebuilder.h"
+#include "stb_image.h"
 
 #include <iostream>
 #include <fstream>
@@ -53,6 +54,12 @@ struct MeshPushConstants {
 struct Material {
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
+	VkDescriptorSet textureSet{ VK_NULL_HANDLE };
+};
+
+struct Texture {
+	AllocatedImage image;
+	VkImageView imageView;
 };
 
 struct RenderObject {
@@ -80,7 +87,8 @@ struct FrameData {
 class VulkanEngine {
 public:
 	std::vector<RenderObject> _renderables;
-
+	
+	std::unordered_map<std::string, Texture> _loadedTextures;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
 	
@@ -109,6 +117,7 @@ public:
 
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorSetLayout _objectSetLayout;
+	VkDescriptorSetLayout _singleTextureSetLayout;
 
 	VkDescriptorPool _descriptorPool;
 
@@ -125,7 +134,7 @@ public:
 
 	struct SDL_Window* _window{ nullptr };
 
-	WindowHandler* painter;
+	WindowHandler* wHandler;
 	Camera3D* camera;
 
 	// Create material and add it to the map
@@ -161,7 +170,9 @@ private:
 	void init_descriptors();
 	void init_pipelines();
 	void load_meshes();
+	void load_images();
 	void init_scene();
 
 	void upload_mesh(Mesh& mesh);
+	bool load_image(std::string fileName, AllocatedImage& outImage);
 };

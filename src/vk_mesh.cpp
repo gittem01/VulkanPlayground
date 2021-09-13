@@ -27,8 +27,15 @@ VertexInputDescription Vertex::get_vertex_description()
 	normalAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
 	normalAttribute.offset = offsetof(Vertex, normal);
 
+	VkVertexInputAttributeDescription uvAttribute = {};
+	uvAttribute.binding = 0;
+	uvAttribute.location = 2;
+	uvAttribute.format = VK_FORMAT_R32G32_SFLOAT;
+	uvAttribute.offset = offsetof(Vertex, uv);
+
 	description.attributes.push_back(positionAttribute);
 	description.attributes.push_back(normalAttribute);
+	description.attributes.push_back(uvAttribute);
 
 	return description;
 }
@@ -47,7 +54,7 @@ bool Mesh::load_from_obj(std::string& fileName)
 	}
 
 	if (!err.empty()) {
-		//std::cerr << err << std::endl;
+		std::cerr << err << std::endl;
 		return false;
 	}
 
@@ -55,7 +62,6 @@ bool Mesh::load_from_obj(std::string& fileName)
 		// Loop over faces(polygon)
 		size_t index_offset = 0;
 		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-			//hardcode loading to triangles
 			int fv = 3;
 
 			// Loop over vertices in the face.
@@ -63,16 +69,18 @@ bool Mesh::load_from_obj(std::string& fileName)
 				// access to vertex
 				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
-				//vertex position
+				// vertex position
 				tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
 				tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
 				tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
-				//vertex normal
+				// vertex normal
 				tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
 				tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
 				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
+				//vertex uv
+				tinyobj::real_t ux = attrib.texcoords[2 * idx.texcoord_index + 0];
+				tinyobj::real_t uy = attrib.texcoords[2 * idx.texcoord_index + 1];
 
-				//copy it into our vertex
 				Vertex new_vert;
 				new_vert.position.x = vx;
 				new_vert.position.y = vy;
@@ -82,6 +90,8 @@ bool Mesh::load_from_obj(std::string& fileName)
 				new_vert.normal.y = ny;
 				new_vert.normal.z = nz;
 
+				new_vert.uv.x = ux;
+				new_vert.uv.y = 1 - uy;
 				_vertices.push_back(new_vert);
 			}
 			index_offset += fv;

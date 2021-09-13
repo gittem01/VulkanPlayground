@@ -1,7 +1,7 @@
 import pathlib
 import os
 import time
-from sys import platform
+from sys import platform, exit
 
 pathOfFile = os.path.dirname(os.path.abspath(__file__))
 
@@ -11,8 +11,10 @@ if platform == "linux" or platform == "linux2":
 elif platform == "win32":
     compilerDir = "C:/VulkanSDK/1.2.182.0/Bin"
     compilerExe = compilerDir + "/glslc.exe"
+else:
+    exit("only tested for linux and windows")
 
-shaderFolders = ["shaders", "testingShaders"]
+shaderFolders = ["shaders"] # folders to check for shader files
 
 fileMap = {}
 

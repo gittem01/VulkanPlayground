@@ -6,6 +6,8 @@
 #include <math.h>
 #include "WindowHandler.h"
 
+#define BASE_MULT 0.25f
+
 typedef enum CameraTypes {
 	WALKER = 1,
 	SURROUNDER = 2,
@@ -30,6 +32,7 @@ public:
 	SDL_Window* window;
 
 	float freeSpeed = 0.1f;
+	float speedMult = BASE_MULT;
 
 	int w, h;
 	WindowHandler* wp;

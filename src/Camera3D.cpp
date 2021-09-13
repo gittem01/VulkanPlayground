@@ -62,7 +62,7 @@ void Camera3D::updateZoom() {
 	}
 	else if (cameraType == SURROUNDER) {
 		if (wp->mouseData[5] != 0) {
-			posAim += lookDir * (float)wp->mouseData[5] * 0.5f;
+			posAim += lookDir * (float)wp->mouseData[5] * speedMult;
 		}
 		glm::vec3 diff = posAim * posSmth;
 		pos += diff;
@@ -76,11 +76,13 @@ void Camera3D::update()
 	SDL_GetWindowSize(this->window, &width, &height);
 	this->w = width; this->h = height;
 
+	speedMult = BASE_MULT;
+
+	updatePos();
+
 	updateZoom();
 
 	rotateFunc();
-	
-	updatePos();
 
 	rightVec = glm::normalize(glm::cross(topVec, lookDir));
 	
@@ -162,6 +164,13 @@ void Camera3D::updatePos()
 }
 
 void Camera3D::keyControl() {
+	if (wp->keyData[SDL_SCANCODE_LCTRL]) {
+		speedMult *= 5.0f;
+	}
+	if (wp->keyData[SDL_SCANCODE_LSHIFT]) {
+		speedMult *= 0.2f;
+	}
+
 	if (cameraType == WALKER) {
 		updateWlkrPos();
 	}
@@ -169,15 +178,8 @@ void Camera3D::keyControl() {
 
 void Camera3D::updateWlkrPos()
 {	
-	float speedMult = 0.2f;
+	
 	glm::vec3 speedAddition = glm::vec3(0, 0, 0);
-
-	if (wp->keyData[SDL_SCANCODE_LCTRL]) {
-		speedMult *= 5.0f;
-	}
-	if (wp->keyData[SDL_SCANCODE_LSHIFT]) {
-		speedMult *= 0.2f;
-	}
 
 	if (wp->keyData[SDL_SCANCODE_W]) {
 		speedAddition.x += freeSpeed * lookDir.x;

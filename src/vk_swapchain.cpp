@@ -60,8 +60,7 @@ void SwapChain::creationLoop() {
             return;
         }
         else {
-            SDL_Event cEvent;
-            while (SDL_PollEvent(&cEvent)) {}
+            SDL_PumpEvents();
         }
     }
 }
