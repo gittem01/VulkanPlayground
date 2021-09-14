@@ -48,7 +48,7 @@ bool Mesh::load_from_obj(std::string& fileName)
 
 	std::string warn;
 	std::string err;
-	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str(), nullptr);
+	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str(), NULL);
 	if (!warn.empty()) {
 		//std::cout << "WARN: " << warn << std::endl;
 	}
@@ -57,7 +57,7 @@ bool Mesh::load_from_obj(std::string& fileName)
 		std::cerr << err << std::endl;
 		return false;
 	}
-
+	
 	for (size_t s = 0; s < shapes.size(); s++) {
 		// Loop over faces(polygon)
 		size_t index_offset = 0;

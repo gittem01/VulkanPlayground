@@ -18,11 +18,14 @@ layout(set = 0, binding = 1) uniform  SceneData{
 
 layout(set = 2, binding = 0) uniform sampler2D tex1;
 
+float ambientRatio = 0.05f;
+
 void main() 
 {	
 	float diff = max(dot(vec4(normal, 1.0f), sceneData.sunlightDirection), 0.0);
-	vec4 diffuseColor = diff * objectColor;
+	vec3 diffuse = vec3(diff * objectColor * (1 - ambientRatio));
+	vec3 ambient = ambientRatio * objectColor.xyz;
 	vec3 texColor = texture(tex1, texCoord).xyz;
 	//outFragColor = vec4(vec3(diffuse), 1.0f);
-	outFragColor = vec4(texColor * diffuseColor.xyz, 1.0f);
+	outFragColor = vec4((diffuse + ambient) * texColor, 1.0f);
 }

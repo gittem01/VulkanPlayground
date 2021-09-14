@@ -50,7 +50,7 @@ public:
         pipelineInfo.pDepthStencilState = &_depthStencil;
 
         VkPipeline newPipeline;
-        if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &newPipeline) != VK_SUCCESS) {
             std::cout << "failed to create pipeline\n";
             return VK_NULL_HANDLE;
         }

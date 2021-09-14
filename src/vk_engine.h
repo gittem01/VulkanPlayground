@@ -60,6 +60,7 @@ struct Material {
 struct Texture {
 	AllocatedImage image;
 	VkImageView imageView;
+	VkSampler sampler;
 };
 
 struct RenderObject {
@@ -132,7 +133,7 @@ public:
 
 	VkExtent2D _windowExtent = { 1200 , 700 };
 
-	struct SDL_Window* _window{ nullptr };
+	struct SDL_Window* _window{ NULL };
 
 	WindowHandler* wHandler;
 	Camera3D* camera;
@@ -172,6 +173,8 @@ private:
 	void load_meshes();
 	void load_images();
 	void init_scene();
+
+	void init_mesh_descriptors();
 
 	void upload_mesh(Mesh& mesh);
 	bool load_image(std::string fileName, AllocatedImage& outImage);

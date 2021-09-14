@@ -41,7 +41,7 @@ VkShaderModule VulkanShader::load_shader_module(VkDevice device, const char* fil
 	createInfo.pCode = buffer.data();
 	
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+	if (vkCreateShaderModule(device, &createInfo, NULL, &shaderModule) != VK_SUCCESS) {
 		return NULL;
 	}
 

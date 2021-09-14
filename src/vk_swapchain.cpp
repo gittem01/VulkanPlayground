@@ -39,7 +39,7 @@ void SwapChain::create(){
     swapChainCreateInfo.presentMode = presentMode;
     swapChainCreateInfo.clipped = VK_TRUE;
 
-    if (vkCreateSwapchainKHR(vulkanEngine->_device, &swapChainCreateInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(vulkanEngine->_device, &swapChainCreateInfo, NULL, &swapChain) != VK_SUCCESS) {
         printf("SwapChain creation error\n"); 
     }
 
@@ -69,20 +69,20 @@ void SwapChain::destroy(){
     VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
 
     for (int i = 0; i < swapchainImageViews.size(); i++) {
-		vkDestroyFramebuffer(vulkanEngine->_device, framebuffers[i], nullptr);
-		vkDestroyImageView(vulkanEngine->_device, swapchainImageViews[i], nullptr);
-	}
+		vkDestroyFramebuffer(vulkanEngine->_device, framebuffers[i], NULL);
+        vkDestroyImageView(vulkanEngine->_device, swapchainImageViews[i], NULL);
+    }
 
-	vkDestroySwapchainKHR(vulkanEngine->_device, swapChain, nullptr);
-	vkDestroyImageView(vulkanEngine->_device, depthImageView, nullptr);
-	vmaDestroyImage(vulkanEngine->_allocator, depthImage._image, depthImage._allocation);
+    vkDestroySwapchainKHR(vulkanEngine->_device, swapChain, NULL);
+    vkDestroyImageView(vulkanEngine->_device, depthImageView, NULL);
+    vmaDestroyImage(vulkanEngine->_allocator, depthImage._image, depthImage._allocation);
 }
 
 void SwapChain::createImageResources() {
     VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
-    
+
     uint32_t imageCount;
-    vkGetSwapchainImagesKHR(vulkanEngine->_device, swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(vulkanEngine->_device, swapChain, &imageCount, NULL);
     swapchainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(vulkanEngine->_device, swapChain, &imageCount, swapchainImages.data());
 
@@ -104,7 +104,7 @@ void SwapChain::createImageResources() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(vulkanEngine->_device, &createInfo, nullptr, &swapchainImageViews[i]) != VK_SUCCESS) {
+        if (vkCreateImageView(vulkanEngine->_device, &createInfo, NULL, &swapchainImageViews[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image views!");
         }
     }
@@ -127,11 +127,11 @@ void SwapChain::createDepthResources(){
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	dimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	vmaCreateImage(vulkanEngine->_allocator, &dimg_info, &dimg_allocinfo, &depthImage._image, &depthImage._allocation, nullptr);
+	vmaCreateImage(vulkanEngine->_allocator, &dimg_info, &dimg_allocinfo, &depthImage._image, &depthImage._allocation, NULL);
 
 	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(depthFormat, depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-	vkCreateImageView(vulkanEngine->_device, &dview_info, nullptr, &depthImageView);
+	vkCreateImageView(vulkanEngine->_device, &dview_info, NULL, &depthImageView);
 }
 
 void SwapChain::createFrameBuffers(){
@@ -140,7 +140,7 @@ void SwapChain::createFrameBuffers(){
     //create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
 	VkFramebufferCreateInfo fb_info = {};
 	fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	fb_info.pNext = nullptr;
+	fb_info.pNext = NULL;
 
 	fb_info.renderPass = vulkanEngine->_renderPass;
 	fb_info.attachmentCount = 1;
@@ -160,7 +160,7 @@ void SwapChain::createFrameBuffers(){
 		fb_info.pAttachments = attachments;
 		fb_info.attachmentCount = 2;
 
-		vkCreateFramebuffer(vulkanEngine->_device, &fb_info, nullptr, &framebuffers[i]);
+		vkCreateFramebuffer(vulkanEngine->_device, &fb_info, NULL, &framebuffers[i]);
 	}
 }
 
@@ -172,7 +172,7 @@ SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice device
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, vullkanEngine->_surface, &details.capabilities);
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, vullkanEngine->_surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, vullkanEngine->_surface, &formatCount, NULL);
 
     if (formatCount != 0) {
         details.formats.resize(formatCount);
@@ -180,7 +180,7 @@ SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice device
     }
 
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, vullkanEngine->_surface, &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, vullkanEngine->_surface, &presentModeCount, NULL);
 
     if (presentModeCount != 0) {
         details.presentModes.resize(presentModeCount);
