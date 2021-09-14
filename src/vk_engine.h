@@ -2,15 +2,16 @@
 
 #include "vk_types.h"
 #include <vk_initializers.h>
-#include "vk_mem_alloc.h"
 #include "vk_mesh.h"
 #include "vk_shader.h"
+#include "vk_mem_alloc.h"
 #include "VkBootstrap.h"
 #include "Camera3D.h"
 #include "glm/gtx/transform.hpp"
 #include "glm/glm.hpp"
 #include "vk_swapchain.h"
 #include "vk_pipelinebuilder.h"
+#include "vk_utils.h"
 #include "stb_image.h"
 
 #include <iostream>
@@ -177,5 +178,4 @@ private:
 	void init_mesh_descriptors();
 
 	void upload_mesh(Mesh& mesh);
-	bool load_image(std::string fileName, AllocatedImage& outImage);
 };

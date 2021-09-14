@@ -8,7 +8,7 @@ SwapChain::SwapChain(void* engine){
 }
 
 void SwapChain::create(){
-    VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
 
@@ -49,7 +49,7 @@ void SwapChain::create(){
 }
 
 void SwapChain::creationLoop() {
-    VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     for (;;) {
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
@@ -66,7 +66,7 @@ void SwapChain::creationLoop() {
 }
 
 void SwapChain::destroy(){
-    VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     for (int i = 0; i < swapchainImageViews.size(); i++) {
 		vkDestroyFramebuffer(vulkanEngine->_device, framebuffers[i], NULL);
@@ -79,7 +79,7 @@ void SwapChain::destroy(){
 }
 
 void SwapChain::createImageResources() {
-    VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     uint32_t imageCount;
     vkGetSwapchainImagesKHR(vulkanEngine->_device, swapChain, &imageCount, NULL);
@@ -111,7 +111,7 @@ void SwapChain::createImageResources() {
 }
 
 void SwapChain::createDepthResources(){
-    VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
 	VkExtent3D depthImageExtent = {
 		extent.width,
@@ -135,7 +135,7 @@ void SwapChain::createDepthResources(){
 }
 
 void SwapChain::createFrameBuffers(){
-    VulkanEngine* vulkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     //create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
 	VkFramebufferCreateInfo fb_info = {};
@@ -165,7 +165,7 @@ void SwapChain::createFrameBuffers(){
 }
 
 SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice device) {
-    VulkanEngine* vullkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vullkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     SwapChainSupportDetails details;
 
@@ -211,7 +211,7 @@ VkPresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<VkPresentMod
 }
 
 VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
-    VulkanEngine* vullkanEngine = (VulkanEngine*)engine;
+    VulkanEngine* vullkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;

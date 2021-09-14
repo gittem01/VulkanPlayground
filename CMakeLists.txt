@@ -31,7 +31,7 @@ add_executable	(VulkanPlayground "src/main.cpp"
 								"src/WindowHandler.h" "src/WindowHandler.cpp"
 								"src/vk_swapchain.h" "src/vk_swapchain.cpp"
 								"src/vk_pipelinebuilder.h"
-				)
+								"src/vk_utils.h" "src/vk_utils.cpp")
 
 target_link_libraries(VulkanPlayground SDL2main)
 target_link_libraries(VulkanPlayground SDL2-static)

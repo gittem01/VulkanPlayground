@@ -1,3 +1,5 @@
+#pragma once
+
 #include "vulkan/vulkan.h"
 #include "vk_shader.h"
 #include <iostream>
