@@ -29,4 +29,5 @@ struct Mesh {
     AllocatedBuffer _vertexBuffer;
 
     bool load_from_obj(std::string& fileName);
+    std::vector<std::string> textureNames; // later use
 };

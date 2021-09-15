@@ -48,22 +48,27 @@ bool Mesh::load_from_obj(std::string& fileName)
 
 	std::string warn;
 	std::string err;
-	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str(), NULL);
+	tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str(), "../../assets/");
 	if (!warn.empty()) {
-		//std::cout << "WARN: " << warn << std::endl;
+		std::cout << "WARN: " << warn << std::endl;
 	}
 
 	if (!err.empty()) {
 		std::cerr << err << std::endl;
 		return false;
 	}
-	
+
+	for (tinyobj::material_t m : materials) {
+		textureNames.push_back(m.diffuse_texname);
+	}
+
 	for (size_t s = 0; s < shapes.size(); s++) {
 		// Loop over faces(polygon)
 		size_t index_offset = 0;
+
 		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
 			int fv = 3;
-
+			
 			// Loop over vertices in the face.
 			for (size_t v = 0; v < fv; v++) {
 				// access to vertex

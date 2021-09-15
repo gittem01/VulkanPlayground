@@ -44,5 +44,3 @@ if (UNIX)
 elseif(WIN32)
 	target_link_libraries(VulkanPlayground vulkanWin)
 endif()
-
-target_compile_definitions(VulkanPlayground PUBLIC BASE_DIR="${CMAKE_SOURCE_DIR}")

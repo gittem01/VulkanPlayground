@@ -169,6 +169,8 @@ void VulkanEngine::cleanup(){
 	}
 }
 
+FrameData& VulkanEngine::get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; }
+
 void VulkanEngine::draw()
 {
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, UINT64_MAX));
@@ -259,11 +261,6 @@ void VulkanEngine::draw()
 	_frameNumber++;
 }
 
-FrameData& VulkanEngine::get_current_frame()
-{
-	return _frames[_frameNumber % FRAME_OVERLAP];
-}
-
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
 {
 	GPUCameraData camData;
@@ -279,10 +276,11 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	memcpy(data, &camData, sizeof(GPUCameraData));
 	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
 
-	float framed = (_frameNumber / 120.f);
-	_sceneParameters.ambientColor = { sin(framed), 0, cos(framed), 1 };
 	_sceneParameters.sunlightDirection = glm::vec4(0.0f, 1.0f, 0.0f, 0.1f);
-
+	_sceneParameters.sunlightColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	_sceneParameters.ambientColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	_sceneParameters.fogColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	
 	char* sceneData;
 	vmaMapMemory(_allocator, _worldBuffers._allocation , (void**)&sceneData);
 	frameIndex = _frameNumber % FRAME_OVERLAP;
@@ -291,16 +289,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
 	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
 
-	void* objectData;
-	vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, &objectData);
-
-	GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+	GPUObjectData* objectData;
+	vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, (void**)&objectData);
 	
 	for (int i = 0; i < count; i++)
 	{
 		RenderObject& object = first[i];
-		objectSSBO[i].modelMatrix = object.transformMatrix;
-		objectSSBO[i].objectColor = object.color;
+		objectData[i].modelMatrix = object.transformMatrix;
+		objectData[i].objectColor = object.color;
 	}
 
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
@@ -320,15 +316,15 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			uint32_t uniform_offset2 = uniform_offset1 + pad_uniform_buffer_size(sizeof(GPUCameraData));
 			uint32_t uniform_offsets[] = { uniform_offset1, uniform_offset2 };
 
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 
-				0, 1, &_globalDescriptor, 2, uniform_offsets);
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
+				0, 1, &_globalDescriptor,						2, uniform_offsets);
 
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
-				1, 1, &get_current_frame().objectDescriptor, 0, NULL);
-
+				1, 1, &get_current_frame().objectDescriptor,	0, NULL);
 			
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, 
-				&object.material->textureSet, 0, NULL);
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
+				2, 1, &object.material->textureSet,				0, NULL);
+			
 		}
 
 		if (object.mesh != lastMesh) {
@@ -553,9 +549,6 @@ void VulkanEngine::init_descriptors()
 
 	vkCreateDescriptorSetLayout(_device, &set1Info, NULL, &_globalSetLayout);
 
-	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-		VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.pNext = NULL;
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -579,16 +572,16 @@ void VulkanEngine::init_descriptors()
 		_globalDescriptor, &cameraInfo, 0);
 	
 	VkWriteDescriptorSet sceneWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 
-		_globalDescriptor, &sceneInfo, 1);
+		_globalDescriptor, &sceneInfo,	1);
 
 	VkWriteDescriptorSet sets[] = { cameraWrite, sceneWrite };
 
 	vkUpdateDescriptorSets(_device, 2, sets, 0, NULL);
 
-	VkDescriptorSetLayoutBinding objectBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-
 	{ // set 2
+		VkDescriptorSetLayoutBinding objectBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
 		VkDescriptorSetLayoutCreateInfo set2info = {};
 		set2info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		set2info.pNext = NULL;
@@ -599,6 +592,9 @@ void VulkanEngine::init_descriptors()
 	}
 
 	{ // set 3
+		VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
 		VkDescriptorSetLayoutCreateInfo set3info = {};
 		set3info.bindingCount = 1;
 		set3info.flags = 0;
@@ -649,8 +645,8 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 void VulkanEngine::init_pipelines() {
 	PipelineBuilder pipelineBuilder;
 	
-	std::string fileNames[] = { std::string(BASE_DIR) + std::string("/shaders/default.vert.spv"), 
-								std::string(BASE_DIR) + std::string("/shaders/default.frag.spv") };
+	std::string fileNames[] = { std::string("../../shaders/default.vert.spv"), 
+								std::string("../../shaders/default.frag.spv") };
 	
 	VulkanShader vulkanShader = VulkanShader(_device, fileNames, 2);
 	pipelineBuilder._shaderStages = vulkanShader.shaderStages;
@@ -700,10 +696,21 @@ void VulkanEngine::init_pipelines() {
 	create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
 }
 
+void VulkanEngine::load_meshes() // mesh handling will be done in a separate class in the future
+{
+	Mesh m;
+	std::string s = std::string("../../assets/monkey_flat.obj");
+	m.load_from_obj(s);
+
+	upload_mesh(m);
+
+	_meshes["monkey"] = m;
+}
+
 void VulkanEngine::load_images()
 {
 	Texture tex; // texture handling will be done in a separate class in the future
-	std::string s = std::string(BASE_DIR) + std::string("/assets/monkey.png");
+	std::string s = std::string("../../assets/monkey.png");
 	vkutil::load_image(this, s, tex.image);
 
 	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, tex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -713,17 +720,6 @@ void VulkanEngine::load_images()
 	vkCreateSampler(_device, &samplerInfo, NULL, &tex.sampler);
 
 	_loadedTextures["monkey"] = tex;
-}
-
-void VulkanEngine::load_meshes() // mesh handling will be done in a separate class in the future
-{
-	Mesh m;
-	std::string s = std::string(BASE_DIR) + std::string("/assets/monkey_flat.obj");
-	m.load_from_obj(s);
-
-	upload_mesh(m);
-
-	_meshes["monkey"] = m;
 }
 
 void VulkanEngine::init_mesh_descriptors() {
@@ -744,7 +740,6 @@ void VulkanEngine::init_mesh_descriptors() {
 
 	vkAllocateDescriptorSets(_device, &allocInfo, &object.material->textureSet);
 
-	//write to the descriptor set so that it points to our empire_diffuse texture
 	VkDescriptorImageInfo imageBufferInfo;
 	imageBufferInfo.sampler = _loadedTextures["monkey"].sampler;
 	imageBufferInfo.imageView = _loadedTextures["monkey"].imageView;
