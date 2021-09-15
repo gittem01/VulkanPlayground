@@ -44,6 +44,8 @@ void VulkanEngine::init()
 
 	init_vulkan();
 
+	setSamples();
+
 	this->_swapChain = new SwapChain((void*)this);
 
 	init_default_renderpass();
@@ -422,14 +424,15 @@ void VulkanEngine::init_default_renderpass()
 {
 	VkAttachmentDescription color_attachment = {};
 	color_attachment.format = _swapChain->swapchainImageFormat;
-	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment.samples = samples;
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	if (samples > VK_SAMPLE_COUNT_1_BIT) color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	else color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 	VkAttachmentReference color_attachment_ref = {};
 	color_attachment_ref.attachment = 0;
@@ -438,7 +441,7 @@ void VulkanEngine::init_default_renderpass()
 	VkAttachmentDescription depth_attachment = {};
 	depth_attachment.flags = 0;
 	depth_attachment.format = _swapChain->depthFormat;
-	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depth_attachment.samples = samples;
 	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -450,20 +453,41 @@ void VulkanEngine::init_default_renderpass()
 	depth_attachment_ref.attachment = 1;
 	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+	VkAttachmentDescription colorAttachmentResolve{};
+	colorAttachmentResolve.format = _swapChain->swapchainImageFormat;
+	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference color_attachment_resolve_ref{};
+	color_attachment_resolve_ref.attachment = 2;
+	color_attachment_resolve_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
 	subpass.pDepthStencilAttachment = &depth_attachment_ref;
+	if (samples > VK_SAMPLE_COUNT_1_BIT) subpass.pResolveAttachments = &color_attachment_resolve_ref;
 
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 
-	VkAttachmentDescription attachments[2] = { color_attachment, depth_attachment };
-
+	std::vector<VkAttachmentDescription> attachments;
+	if (samples > VK_SAMPLE_COUNT_1_BIT) {
+		attachments = { color_attachment, depth_attachment, colorAttachmentResolve };
+	}
+	else {
+		attachments = { color_attachment, depth_attachment };
+	}
+	
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_info.attachmentCount = 2;
-	render_pass_info.pAttachments = &attachments[0];
+	render_pass_info.attachmentCount = attachments.size();
+	render_pass_info.pAttachments = attachments.data();
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
 
@@ -656,7 +680,7 @@ void VulkanEngine::init_pipelines() {
 
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 	
-	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
+	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info(samples);
 
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
@@ -665,7 +689,7 @@ void VulkanEngine::init_pipelines() {
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
 
 	VkDescriptorSetLayout setLayouts[] = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
-	mesh_pipeline_layout_info.setLayoutCount = 3;
+	mesh_pipeline_layout_info.setLayoutCount = sizeof(setLayouts) / sizeof(setLayouts[0]);
 	mesh_pipeline_layout_info.pSetLayouts = setLayouts;
 
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, NULL, &_meshPipelineLayout));
@@ -699,17 +723,17 @@ void VulkanEngine::load_meshes() // mesh handling will be done in a separate cla
 
 	upload_mesh(m);
 
-	_meshes["mesh"] = m;
+	_meshes["monkey"] = m;
 }
 
 void VulkanEngine::init_mesh_descriptors() {
-	RenderObject monkey;
-	monkey.mesh = get_mesh("mesh");
-	monkey.material = get_material("defaultmesh");
-	monkey.transformMatrix = glm::mat4{ 1.0f };
-	monkey.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	RenderObject object;
+	object.mesh = get_mesh("monkey");
+	object.material = get_material("defaultmesh");
+	object.transformMatrix = glm::mat4{ 1.0f };
+	object.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	_renderables.push_back(monkey);
+	_renderables.push_back(object);
 
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.pNext = NULL;
@@ -718,7 +742,7 @@ void VulkanEngine::init_mesh_descriptors() {
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = &_singleTextureSetLayout;
 
-	vkAllocateDescriptorSets(_device, &allocInfo, &monkey.material->textureSet);
+	vkAllocateDescriptorSets(_device, &allocInfo, &object.material->textureSet);
 
 	//write to the descriptor set so that it points to our empire_diffuse texture
 	VkDescriptorImageInfo imageBufferInfo;
@@ -727,7 +751,7 @@ void VulkanEngine::init_mesh_descriptors() {
 	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-		monkey.material->textureSet, &imageBufferInfo, 0);
+		object.material->textureSet, &imageBufferInfo, 0);
 
 	vkUpdateDescriptorSets(_device, 1, &texture1, 0, NULL);
 }
@@ -735,20 +759,20 @@ void VulkanEngine::init_mesh_descriptors() {
 void VulkanEngine::init_scene() // temporary
 {
 	init_mesh_descriptors();
-
+	
 	int n = 20;
 	for (int x = -n; x <= n; x++) {
 		for (int y = -n; y <= n; y++) {
-			RenderObject tri;
-			tri.mesh = get_mesh("mesh");
-			tri.material = get_material("defaultmesh");
+			RenderObject monkey;
+			monkey.mesh = get_mesh("monkey");
+			monkey.material = get_material("defaultmesh");
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, 
 				glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, 
 				glm::vec3(0.25, 0.25, 0.25));
-			tri.transformMatrix = translation * scale;
-			tri.color = glm::vec4(getRand01(), getRand01(), getRand01(), 1.0f);
-			_renderables.push_back(tri);
+			monkey.transformMatrix = translation * scale;
+			monkey.color = glm::vec4(getRand01(), getRand01(), getRand01(), 1.0f);
+			_renderables.push_back(monkey);
 		}
 	}
 }
@@ -873,4 +897,18 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 	else {
 		return &(*it).second;
 	}
+}
+
+void VulkanEngine::setSamples() {
+	VkSampleCountFlags counts = _GPUProperties.limits.framebufferColorSampleCounts & _GPUProperties.limits.framebufferDepthSampleCounts;
+
+	for (uint32_t flags = desiredSamples; flags >= VK_SAMPLE_COUNT_1_BIT; flags >>= 1) {
+		if (flags & counts) {
+			samples = (VkSampleCountFlagBits)flags;
+			break;
+		}
+	}
+
+	uint32_t maxSampleCount = pow(2, (uint32_t)log2(counts));
+	printf("Desired sample count: %d\nApplied sample count: %d\nMax sample count: %d\n\n", desiredSamples, samples, maxSampleCount);
 }

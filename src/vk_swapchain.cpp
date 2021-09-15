@@ -44,7 +44,7 @@ void SwapChain::create(){
     }
 
     createImageResources();
-
+    if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) createColorResources();
     createDepthResources();
 }
 
@@ -76,6 +76,10 @@ void SwapChain::destroy(){
     vkDestroySwapchainKHR(vulkanEngine->_device, swapChain, NULL);
     vkDestroyImageView(vulkanEngine->_device, depthImageView, NULL);
     vmaDestroyImage(vulkanEngine->_allocator, depthImage._image, depthImage._allocation);
+    if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) {
+        vkDestroyImageView(vulkanEngine->_device, colorImageView, NULL);
+        vmaDestroyImage(vulkanEngine->_allocator, colorImage._image, colorImage._allocation);
+    }
 }
 
 void SwapChain::createImageResources() {
@@ -110,6 +114,29 @@ void SwapChain::createImageResources() {
     }
 }
 
+void SwapChain::createColorResources() {
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
+
+    VkExtent3D colorImageExtent = {
+        extent.width,
+        extent.height,
+        1
+    };
+
+    VkImageCreateInfo cimg_info = vkinit::image_create_info(swapchainImageFormat,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, colorImageExtent, vulkanEngine->samples);
+
+    VmaAllocationCreateInfo cimg_allocinfo = {};
+    cimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    cimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    vmaCreateImage(vulkanEngine->_allocator, &cimg_info, &cimg_allocinfo, &colorImage._image, &colorImage._allocation, NULL);
+
+    VkImageViewCreateInfo cview_info = vkinit::imageview_create_info(swapchainImageFormat, colorImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCreateImageView(vulkanEngine->_device, &cview_info, NULL, &colorImageView);
+}
+
 void SwapChain::createDepthResources(){
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
@@ -121,7 +148,8 @@ void SwapChain::createDepthResources(){
 
 	depthFormat = VK_FORMAT_D32_SFLOAT;
 
-	VkImageCreateInfo dimg_info = vkinit::image_create_info(depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
+        depthImageExtent, vulkanEngine->samples);
 
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -153,12 +181,12 @@ void SwapChain::createFrameBuffers(){
 
 	for (int i = 0; i < swapchain_imagecount; i++) {
 
-		VkImageView attachments[2];
-		attachments[0] = swapchainImageViews[i];
-		attachments[1] = depthImageView;
-
-		fb_info.pAttachments = attachments;
-		fb_info.attachmentCount = 2;
+		std::vector<VkImageView> attachments;
+        if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) attachments = { colorImageView, depthImageView, swapchainImageViews[i] };
+        else attachments = { swapchainImageViews[i], depthImageView };
+        
+		fb_info.pAttachments = attachments.data();
+		fb_info.attachmentCount = attachments.size();
 
 		vkCreateFramebuffer(vulkanEngine->_device, &fb_info, NULL, &framebuffers[i]);
 	}

@@ -20,6 +20,7 @@
 #include <deque>
 #include <functional>
 #include <unordered_map>
+#include <math.h>
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
@@ -99,6 +100,9 @@ public:
 	bool _isInitialized = false;
 	int _frameNumber = 0;
 
+	VkSampleCountFlagBits desiredSamples = VK_SAMPLE_COUNT_4_BIT;
+	VkSampleCountFlagBits samples;
+
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debug_messenger;
 	VkPhysicalDevice _chosenGPU;
@@ -149,7 +153,8 @@ public:
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	size_t pad_uniform_buffer_size(size_t originalSize);
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
-	
+	void setSamples();
+
 	// Initializes everything in the engine
 	void init();
 

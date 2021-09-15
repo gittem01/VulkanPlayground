@@ -26,6 +26,9 @@ public:
 	AllocatedImage depthImage;
 	VkFormat depthFormat;
 
+    VkImageView colorImageView;
+    AllocatedImage colorImage;
+
     void create();
     void destroy();
     void creationLoop();
@@ -40,5 +43,6 @@ private:
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
     void createImageResources();
+    void createColorResources();
     void createDepthResources();
 };

@@ -31,7 +31,8 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 	imageExtent.height = static_cast<uint32_t>(height);
 	imageExtent.depth = 1;
 
-	VkImageCreateInfo dimg_info = vkinit::image_create_info(image_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(image_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 
+		imageExtent, VK_SAMPLE_COUNT_1_BIT);
 
 	AllocatedImage newImage;
 

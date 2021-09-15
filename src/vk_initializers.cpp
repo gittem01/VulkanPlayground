@@ -71,7 +71,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 	info.polygonMode = polygonMode;
 	info.lineWidth = 2.0f;
 	
-	info.cullMode = VK_CULL_MODE_FRONT_BIT;
+	info.cullMode = VK_CULL_MODE_NONE;
 	info.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
 	info.depthBiasEnable = VK_FALSE;
@@ -82,14 +82,14 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 	return info;
 }
 
-VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
+VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info(VkSampleCountFlagBits samples) {
 	VkPipelineMultisampleStateCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	info.pNext = NULL;
 
 	info.sampleShadingEnable = VK_FALSE;
-	// multisampling defaulted to no multisampling (1 sample per pixel)
-	info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	info.rasterizationSamples = samples;
 	info.minSampleShading = 1.0f;
 	info.pSampleMask = NULL;
 	info.alphaToCoverageEnable = VK_FALSE;
@@ -117,7 +117,6 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	info.pNext = NULL;
 
-	// empty defaults
 	info.flags = 0;
 	info.setLayoutCount = 0;
 	info.pSetLayouts = NULL;
@@ -126,7 +125,7 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 	return info;
 }
 
-VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent)
+VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent, VkSampleCountFlagBits samples)
 {
 	VkImageCreateInfo info = { };
 	info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -139,7 +138,7 @@ VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags u
 
 	info.mipLevels = 1;
 	info.arrayLayers = 1;
-	info.samples = VK_SAMPLE_COUNT_1_BIT;
+	info.samples = samples;
 	info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	info.usage = usageFlags;
 
