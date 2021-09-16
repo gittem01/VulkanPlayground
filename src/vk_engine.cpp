@@ -303,37 +303,38 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 
-	Mesh* lastMesh = NULL;
-	Material* lastMaterial = NULL;
+	std::string lastMesh = std::string();
+	std::string lastMaterial = std::string();
 	for (int i = 0; i < count; i++)
 	{
 		RenderObject& object = first[i];
+		Mesh& mesh = _meshes[object.meshName];
 
-		if (object.material != lastMaterial) {
-
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-			lastMaterial = object.material;
+		if (object.materialName != lastMaterial) {
+			Material& material = _materials[object.materialName];
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
+			lastMaterial = object.materialName;
 
 			uint32_t uniform_offset1 = fullSize * frameIndex;
 			uint32_t uniform_offset2 = uniform_offset1 + pad_uniform_buffer_size(sizeof(GPUCameraData));
 			uint32_t uniform_offsets[] = { uniform_offset1, uniform_offset2 };
 
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
 				0, 1, &_globalDescriptor,								2, uniform_offsets);
 
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
 				1, 1, &get_current_frame().objectDescriptor,			0, NULL);
 			
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
 				2, 1, &_loadedTextures[object.textureName].textureSet,	0, NULL);
 		}
 
-		if (object.mesh != lastMesh) {
+		if (object.meshName != lastMesh) {
 			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
-			lastMesh = object.mesh;
+			vkCmdBindVertexBuffers(cmd, 0, 1, &mesh._vertexBuffer._buffer, &offset);
+			lastMesh = object.meshName;
 		}
-		vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, i);
+		vkCmdDraw(cmd, mesh._vertices.size(), 1, 0, i);
 	}
 }
 
@@ -704,76 +705,6 @@ void VulkanEngine::load_meshes() // mesh handling will be done in a separate cla
 	_meshes["monkey"] = m;
 }
 
-void VulkanEngine::load_images()
-{
-	get_image(std::string("../../assets/monkey.png"), "monkey");
-}
-
-void VulkanEngine::get_image(std::string imagePath, const char* imageName) {
-	Texture tex; // texture handling will be done in a separate class in the future
-
-	vkutil::load_image(this, imagePath, tex.image);
-
-	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, tex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
-	vkCreateImageView(_device, &imageinfo, NULL, &tex.imageView);
-
-	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
-	vkCreateSampler(_device, &samplerInfo, NULL, &tex.sampler);
-
-	update_image_descriptors(&tex);
-
-	_loadedTextures[imageName] = tex;
-}
-
-void VulkanEngine::update_image_descriptors(Texture* tex) {
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.pNext = NULL;
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = _descriptorPool;
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &_singleTextureSetLayout;
-
-	vkAllocateDescriptorSets(_device, &allocInfo, &tex->textureSet);
-
-	VkDescriptorImageInfo imageBufferInfo;
-	imageBufferInfo.imageView = tex->imageView;
-	imageBufferInfo.sampler = tex->sampler;
-	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	VkWriteDescriptorSet texture = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		tex->textureSet, &imageBufferInfo, 0);
-
-	vkUpdateDescriptorSets(_device, 1, &texture, 0, NULL);
-}
-
-void VulkanEngine::init_scene() // temporary
-{
-	
-	RenderObject object;
-	object.mesh = get_mesh("monkey");
-	object.textureName = "monkey";
-	object.material = get_material("defaultMaterial");
-	object.transformMatrix = glm::mat4{ 1.0f };
-	object.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-	_renderables.push_back(object);
-	int n = 20;
-	for (int x = -n; x <= n; x++) {
-		for (int y = -n; y <= n; y++) {
-			RenderObject monkey;
-			monkey.mesh = get_mesh("monkey");
-			monkey.material = get_material("defaultMaterial");
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, 
-				glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, 
-				glm::vec3(0.25, 0.25, 0.25));
-			monkey.transformMatrix = translation * scale;
-			monkey.color = glm::vec4(getRand01(), getRand01(), getRand01(), 1.0f);
-			_renderables.push_back(monkey);
-		}
-	}
-}
-
 void VulkanEngine::upload_mesh(Mesh& mesh)
 {
 	const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
@@ -821,9 +752,71 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		copy.srcOffset = 0;
 		copy.size = bufferSize;
 		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
-	});
+		});
 
 	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+}
+
+void VulkanEngine::load_images()
+{
+	get_image(std::string("../../assets/monkey.png"), "monkey");
+}
+
+void VulkanEngine::get_image(std::string imagePath, const char* imageName) {
+	Texture tex; // texture handling will be done in a separate class in the future
+
+	vkutil::load_image(this, imagePath, tex.image);
+
+	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, tex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	vkCreateImageView(_device, &imageinfo, NULL, &tex.imageView);
+
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+	vkCreateSampler(_device, &samplerInfo, NULL, &tex.sampler);
+
+	update_image_descriptors(&tex);
+
+	_loadedTextures[imageName] = tex;
+}
+
+void VulkanEngine::update_image_descriptors(Texture* tex) {
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.pNext = NULL;
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = _descriptorPool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &_singleTextureSetLayout;
+
+	vkAllocateDescriptorSets(_device, &allocInfo, &tex->textureSet);
+
+	VkDescriptorImageInfo imageBufferInfo;
+	imageBufferInfo.imageView = tex->imageView;
+	imageBufferInfo.sampler = tex->sampler;
+	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet texture = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		tex->textureSet, &imageBufferInfo, 0);
+
+	vkUpdateDescriptorSets(_device, 1, &texture, 0, NULL);
+}
+
+void VulkanEngine::init_scene() // temporary
+{
+	int n = 10;
+	for (int x = -n; x <= n; x++) {
+		for (int y = -n; y <= n; y++) {
+			RenderObject monkey;
+			monkey.meshName = "monkey";
+			monkey.textureName = "monkey";
+			monkey.materialName = "defaultMaterial";
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, 
+				glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, 
+				glm::vec3(0.5, 0.5, 0.5));
+			monkey.transformMatrix = translation * scale;
+			monkey.color = glm::vec4(getRand01(), getRand01(), getRand01(), 1.0f);
+			_renderables.push_back(monkey);
+		}
+	}
 }
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)

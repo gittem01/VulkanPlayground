@@ -48,11 +48,6 @@ struct GPUCameraData {
 	glm::mat4 viewproj;
 };
 
-struct MeshPushConstants {
-	glm::vec4 data;
-	glm::mat4 render_matrix;
-};
-
 struct Material {
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
@@ -66,9 +61,8 @@ struct Texture {
 };
 
 struct RenderObject {
-	Mesh* mesh;
-
-	Material* material;
+	std::string meshName;
+	std::string materialName;
 	std::string textureName;
 
 	glm::mat4 transformMatrix;
