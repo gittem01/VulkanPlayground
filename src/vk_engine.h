@@ -117,9 +117,9 @@ public:
 
 	VkRenderPass _renderPass;
 
-	VkPipeline _meshPipeline;
+	VkPipeline _defaultPipeline;
 
-	VkPipelineLayout _meshPipelineLayout;
+	VkPipelineLayout _defaultPipelineLayout;
 
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorSetLayout _objectSetLayout;

@@ -78,8 +78,8 @@ void VulkanEngine::windowResizeEvent(){
 		vkDestroyCommandPool(_device, _frames[i]._commandPool, NULL);
 	}
 
-	vkDestroyPipeline(_device, _meshPipeline, NULL);
-	vkDestroyPipelineLayout(_device, _meshPipelineLayout, NULL);
+	vkDestroyPipeline(_device, _defaultPipeline, NULL);
+	vkDestroyPipelineLayout(_device, _defaultPipelineLayout, NULL);
 	vkDestroyRenderPass(_device, _renderPass, NULL);
 
 	for (int i=0; i<FRAME_OVERLAP; i++){
@@ -122,8 +122,8 @@ void VulkanEngine::cleanup(){
 			vmaDestroyImage(_allocator, t.image._image, t.image._allocation);
 		}
 
-		vkDestroyPipeline(_device, _meshPipeline, NULL);
-		vkDestroyPipelineLayout(_device, _meshPipelineLayout, NULL);
+		vkDestroyPipeline(_device, _defaultPipeline, NULL);
+		vkDestroyPipelineLayout(_device, _defaultPipelineLayout, NULL);
 
 		for (int i=0; i<FRAME_OVERLAP; i++){
 			vmaDestroyBuffer(_allocator, _frames[i].objectBuffer._buffer , _frames[i].objectBuffer._allocation);
@@ -324,7 +324,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 			
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
 				2, 1, &object.material->textureSet,				0, NULL);
-			
 		}
 
 		if (object.mesh != lastMesh) {
@@ -688,12 +687,12 @@ void VulkanEngine::init_pipelines() {
 	mesh_pipeline_layout_info.setLayoutCount = sizeof(setLayouts) / sizeof(setLayouts[0]);
 	mesh_pipeline_layout_info.pSetLayouts = setLayouts;
 
-	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, NULL, &_meshPipelineLayout));
+	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, NULL, &_defaultPipelineLayout));
 
-	pipelineBuilder._pipelineLayout = _meshPipelineLayout;
-	_meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	pipelineBuilder._pipelineLayout = _defaultPipelineLayout;
+	_defaultPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
-	create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
+	create_material(_defaultPipeline, _defaultPipelineLayout, "defaultMaterial");
 }
 
 void VulkanEngine::load_meshes() // mesh handling will be done in a separate class in the future
@@ -725,12 +724,12 @@ void VulkanEngine::load_images()
 void VulkanEngine::init_mesh_descriptors() {
 	RenderObject object;
 	object.mesh = get_mesh("monkey");
-	object.material = get_material("defaultmesh");
+	object.material = get_material("defaultMaterial");
 	object.transformMatrix = glm::mat4{ 1.0f };
 	object.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
+	
 	_renderables.push_back(object);
-
+	_materials["defaultMaterial"];
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.pNext = NULL;
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -738,7 +737,7 @@ void VulkanEngine::init_mesh_descriptors() {
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = &_singleTextureSetLayout;
 
-	vkAllocateDescriptorSets(_device, &allocInfo, &object.material->textureSet);
+	vkAllocateDescriptorSets(_device, &allocInfo, &_materials["defaultMaterial"].textureSet);
 
 	VkDescriptorImageInfo imageBufferInfo;
 	imageBufferInfo.sampler = _loadedTextures["monkey"].sampler;
@@ -746,9 +745,11 @@ void VulkanEngine::init_mesh_descriptors() {
 	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-		object.material->textureSet, &imageBufferInfo, 0);
+		_materials["defaultMaterial"].textureSet, &imageBufferInfo, 0);
 
 	vkUpdateDescriptorSets(_device, 1, &texture1, 0, NULL);
+
+	object.material->textureSet = _materials["defaultMaterial"].textureSet;
 }
 
 void VulkanEngine::init_scene() // temporary
@@ -760,7 +761,7 @@ void VulkanEngine::init_scene() // temporary
 		for (int y = -n; y <= n; y++) {
 			RenderObject monkey;
 			monkey.mesh = get_mesh("monkey");
-			monkey.material = get_material("defaultmesh");
+			monkey.material = get_material("defaultMaterial");
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, 
 				glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, 
