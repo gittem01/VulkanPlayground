@@ -56,19 +56,20 @@ struct MeshPushConstants {
 struct Material {
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
-	VkDescriptorSet textureSet{ VK_NULL_HANDLE };
 };
 
 struct Texture {
 	AllocatedImage image;
 	VkImageView imageView;
 	VkSampler sampler;
+	VkDescriptorSet textureSet;
 };
 
 struct RenderObject {
 	Mesh* mesh;
 
 	Material* material;
+	std::string textureName;
 
 	glm::mat4 transformMatrix;
 	glm::vec4 color;
@@ -178,9 +179,9 @@ private:
 	void init_pipelines();
 	void load_meshes();
 	void load_images();
+	void get_image(std::string imagePath, const char* imageName);
+	void update_image_descriptors(Texture* tex);
 	void init_scene();
-
-	void init_mesh_descriptors();
 
 	void upload_mesh(Mesh& mesh);
 };
