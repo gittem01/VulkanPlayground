@@ -138,29 +138,36 @@ public:
 	WindowHandler* wHandler;
 	Camera3D* camera;
 
+	VulkanEngine();
+	~VulkanEngine();
+
+	void get_mesh(std::string meshPath, const char* meshName);
+	void get_image(std::string imagePath, const char* imageName, VkFilter filter = VK_FILTER_LINEAR);
+
 	// Create material and add it to the map
 	Material* create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
 	Material* get_material(const std::string& name);
 	Mesh* get_mesh(const std::string& name);
-	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
 
 	FrameData& get_current_frame();
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	size_t pad_uniform_buffer_size(size_t originalSize);
+
+	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 	void setSamples();
 
-	// Initializes everything in the engine
+	// initializes everything in the engine
 	void init();
 
-	// Shuts down the engine
+	// shuts down the engine
 	void cleanup();
 
-	// Draw loop
-	void draw();
+	// render loop
+	void render();
 
-	// Run main loop
-	void run();
+	// main loop
+	bool looper();
 
 private:
 	void windowResizeEvent();
@@ -171,9 +178,6 @@ private:
 	void init_sync_structures();
 	void init_descriptors();
 	void init_pipelines();
-	void load_meshes();
-	void load_images();
-	void get_image(std::string imagePath, const char* imageName);
 	void update_image_descriptors(Texture* tex);
 	void init_scene();
 

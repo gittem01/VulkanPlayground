@@ -19,20 +19,20 @@
 	}																\
 }
 
-float getRand01(){
-	return ((double)rand()) / RAND_MAX;
+VulkanEngine::VulkanEngine() {
+	init();
 }
 
-void VulkanEngine::run()
-{
-	bool done = false;
+VulkanEngine::~VulkanEngine() {
+	cleanup();
+}
 
-	while (!done)
-	{
-		if (!wHandler->looper()) done = true;
-		camera->update();
-		draw();
-	}
+bool VulkanEngine::looper()
+{
+	if (!wHandler->looper()) return true;
+	camera->update();
+	render();
+	return false;
 }
 
 void VulkanEngine::init()
@@ -59,12 +59,6 @@ void VulkanEngine::init()
 	init_descriptors();
 	
 	init_pipelines();
-
-	load_meshes();
-	
-	load_images();
-	
-	init_scene();
 
 	_isInitialized = true;
 }
@@ -173,7 +167,7 @@ void VulkanEngine::cleanup(){
 
 FrameData& VulkanEngine::get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; }
 
-void VulkanEngine::draw()
+void VulkanEngine::render()
 {
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, UINT64_MAX));
 
@@ -694,15 +688,15 @@ void VulkanEngine::init_pipelines() {
 	create_material(_defaultPipeline, _defaultPipelineLayout, "defaultMaterial");
 }
 
-void VulkanEngine::load_meshes() // mesh handling will be done in a separate class in the future
-{
+void VulkanEngine::get_mesh(std::string meshPath, const char* meshName) {
 	Mesh m;
-	std::string s = std::string("../../assets/monkey_flat.obj");
+
+	std::string s = std::string(meshPath);
 	m.load_from_obj(s);
 
 	upload_mesh(m);
 
-	_meshes["monkey"] = m;
+	_meshes[meshName] = m;
 }
 
 void VulkanEngine::upload_mesh(Mesh& mesh)
@@ -752,17 +746,12 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		copy.srcOffset = 0;
 		copy.size = bufferSize;
 		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
-		});
+	});
 
 	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }
 
-void VulkanEngine::load_images()
-{
-	get_image(std::string("../../assets/monkey.png"), "monkey");
-}
-
-void VulkanEngine::get_image(std::string imagePath, const char* imageName) {
+void VulkanEngine::get_image(std::string imagePath, const char* imageName, VkFilter filter) {
 	Texture tex; // texture handling will be done in a separate class in the future
 
 	vkutil::load_image(this, imagePath, tex.image);
@@ -770,7 +759,7 @@ void VulkanEngine::get_image(std::string imagePath, const char* imageName) {
 	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, tex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	vkCreateImageView(_device, &imageinfo, NULL, &tex.imageView);
 
-	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(filter);
 	vkCreateSampler(_device, &samplerInfo, NULL, &tex.sampler);
 
 	update_image_descriptors(&tex);
@@ -801,22 +790,7 @@ void VulkanEngine::update_image_descriptors(Texture* tex) {
 
 void VulkanEngine::init_scene() // temporary
 {
-	int n = 10;
-	for (int x = -n; x <= n; x++) {
-		for (int y = -n; y <= n; y++) {
-			RenderObject monkey;
-			monkey.meshName = "monkey";
-			monkey.textureName = "monkey";
-			monkey.materialName = "defaultMaterial";
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, 
-				glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, 
-				glm::vec3(0.5, 0.5, 0.5));
-			monkey.transformMatrix = translation * scale;
-			monkey.color = glm::vec4(getRand01(), getRand01(), getRand01(), 1.0f);
-			_renderables.push_back(monkey);
-		}
-	}
+	
 }
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
