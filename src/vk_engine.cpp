@@ -338,7 +338,7 @@ void VulkanEngine::init_vulkan()
 
 	auto inst_ret = builder.set_app_name("AppX")
 		.request_validation_layers(IS_DEBUG)
-		.require_api_version(1, 1, 0);
+		.require_api_version(1, 2, 0);
 
 #if IS_DEBUG
 	printf("Validation layers are enabled\n\n");
@@ -363,11 +363,16 @@ void VulkanEngine::init_vulkan()
 	VkPhysicalDeviceFeatures features = {};
 	features.fillModeNonSolid = VK_TRUE;
 	features.wideLines = VK_TRUE;
+	
+	VkPhysicalDeviceVulkan11Features features11 = {};
+	features11.shaderDrawParameters = VK_TRUE;
+
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physicalDevice = selector
-		.set_minimum_version(1, 1)
+		.set_minimum_version(1, 0)
 		.set_surface(_surface)
 		.set_required_features(features)
+		.set_required_features_11(features11)
 		.select()
 		.value();
 
