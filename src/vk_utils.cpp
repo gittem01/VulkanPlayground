@@ -42,26 +42,12 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 	vmaCreateImage(vulkanEngine->_allocator, &dimg_info, &dimg_allocinfo, &newImage._image, &newImage._allocation, NULL);
 
 	vulkanEngine->immediate_submit([&](VkCommandBuffer cmd) {
-		VkImageSubresourceRange range;
-		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		range.baseMipLevel = 0;
-		range.levelCount = 1;
-		range.baseArrayLayer = 0;
-		range.layerCount = 1;
 
-		VkImageMemoryBarrier imageBarrier_toTransfer = {};
-		imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-
-		imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier_toTransfer.image = newImage._image;
-		imageBarrier_toTransfer.subresourceRange = range;
-
-		imageBarrier_toTransfer.srcAccessMask = 0;
-		imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
-			NULL, 0, NULL, 1, &imageBarrier_toTransfer);
+		VkImageMemoryBarrier imageBarrier_toTransfer = vkutil::insertImageMemoryBarrier(cmd, newImage._image, 0,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+		);
 
 		VkBufferImageCopy copyRegion = {};
 		copyRegion.bufferOffset = 0;
@@ -95,4 +81,24 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 	outImage = newImage;
 
 	return true;
+}
+
+VkImageMemoryBarrier& vkutil::insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
+	VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
+	VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkImageSubresourceRange subresourceRange)
+{
+	VkImageMemoryBarrier imageMemoryBarrier{};
+	imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imageMemoryBarrier.srcAccessMask = srcAccessMask;
+	imageMemoryBarrier.dstAccessMask = dstAccessMask;
+	imageMemoryBarrier.oldLayout = oldImageLayout;
+	imageMemoryBarrier.newLayout = newImageLayout;
+	imageMemoryBarrier.image = image;
+	imageMemoryBarrier.subresourceRange = subresourceRange;
+
+	vkCmdPipelineBarrier(cmdbuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+
+	return imageMemoryBarrier;
 }

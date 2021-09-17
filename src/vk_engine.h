@@ -93,6 +93,8 @@ public:
 	SwapChain* _swapChain;
 
 	bool _isInitialized = false;
+	bool _isHeadless = false; // still testing...
+	uint32_t lastSwapchainImageIndex;
 	int _frameNumber = 0;
 
 	VkSampleCountFlagBits desiredSamples = VK_SAMPLE_COUNT_4_BIT;
@@ -182,4 +184,7 @@ private:
 	void init_scene();
 
 	void upload_mesh(Mesh& mesh);
+	void submitWork(VkCommandBuffer cmdBuffer, VkQueue queue);
+	uint32_t getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
+	void getImageData(char* imagedata);
 };

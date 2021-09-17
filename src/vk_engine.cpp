@@ -4,11 +4,7 @@
 #include "vk_engine.h"
 #include <string>
 
-#ifndef NDEBUG
-	#define IS_DEBUG 1
-#else
-	#define IS_DEBUG 0
-#endif // NDEBUG
+#define ENABLE_VALIDATION 0
 
 #define VK_CHECK(x){												\
 	VkResult err = x;												\
@@ -32,6 +28,11 @@ bool VulkanEngine::looper()
 	if (!wHandler->looper()) return true;
 	camera->update();
 	render();
+
+	if (_isHeadless) {
+		camera->pos.z -= 0.5f;
+	}
+
 	return false;
 }
 
@@ -39,9 +40,8 @@ void VulkanEngine::init()
 {
 	wHandler = new WindowHandler(_windowExtent.width, _windowExtent.height);
 	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
-
 	_window = wHandler->window;
-
+	
 	init_vulkan();
 
 	setSamples();
@@ -152,7 +152,7 @@ void VulkanEngine::cleanup(){
 
 		vmaDestroyAllocator(_allocator);
 
-#if IS_DEBUG
+#if ENABLE_VALIDATION
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 #endif
 
@@ -167,17 +167,21 @@ void VulkanEngine::cleanup(){
 
 FrameData& VulkanEngine::get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; }
 
+
 void VulkanEngine::render()
 {
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, UINT64_MAX));
 
-	uint32_t swapchainImageIndex;
-	VkResult result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX, get_current_frame()._presentSemaphore, NULL, &swapchainImageIndex);
+	VkResult result;
+	if (!_isHeadless) {
+		result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX, get_current_frame()._presentSemaphore, NULL, &lastSwapchainImageIndex);
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-		windowResizeEvent();
-		return;
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			windowResizeEvent();
+			return;
+		}
 	}
+	
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 	VK_CHECK(vkResetCommandBuffer(get_current_frame()._mainCommandBuffer, 0));
 
@@ -205,8 +209,11 @@ void VulkanEngine::render()
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
 	rpInfo.renderArea.extent = _swapChain->extent;
-	rpInfo.framebuffer = _swapChain->framebuffers[swapchainImageIndex];
 
+	if (!_isHeadless)
+		rpInfo.framebuffer = _swapChain->framebuffers[lastSwapchainImageIndex];
+	else
+		rpInfo.framebuffer = _swapChain->framebuffers[_frameNumber % FRAME_OVERLAP];
 	rpInfo.clearValueCount = 2;
 
 	VkClearValue clearValues[] = { clearValue, depthClear };
@@ -227,31 +234,38 @@ void VulkanEngine::render()
 	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	submit.pWaitDstStageMask = &waitStage;
 
-	submit.waitSemaphoreCount = 1;
-	submit.pWaitSemaphores = &get_current_frame()._presentSemaphore;
+	if (!_isHeadless) {
+		submit.waitSemaphoreCount = 1;
+		submit.pWaitSemaphores = &get_current_frame()._presentSemaphore;
 
-	submit.signalSemaphoreCount = 1;
-	submit.pSignalSemaphores = &get_current_frame()._renderSemaphore;
+		submit.signalSemaphoreCount = 1;
+		submit.pSignalSemaphores = &get_current_frame()._renderSemaphore;
+	}
 
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
 
 	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
+	if (!_isHeadless) {
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.pNext = NULL;
+		presentInfo.pSwapchains = &_swapChain->swapChain;
+		presentInfo.swapchainCount = 1;
 
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.pNext = NULL;
-	presentInfo.pSwapchains = &_swapChain->swapChain;
-	presentInfo.swapchainCount = 1;
+		presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
+		presentInfo.waitSemaphoreCount = 1;
 
-	presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
-	presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pImageIndices = &lastSwapchainImageIndex;
 
-	presentInfo.pImageIndices = &swapchainImageIndex;
-
-	result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-		windowResizeEvent();
+		result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+			windowResizeEvent();
+		}
+	}
+	else {
+		char* c = NULL;
+		getImageData(c);
 	}
 
 	_frameNumber++;
@@ -337,12 +351,12 @@ void VulkanEngine::init_vulkan()
 	vkb::InstanceBuilder builder;
 
 	auto inst_ret = builder.set_app_name("AppX")
-		.request_validation_layers(IS_DEBUG)
+		.request_validation_layers(ENABLE_VALIDATION)
 		.require_api_version(1, 2, 0);
 
-#if IS_DEBUG
+#if ENABLE_VALIDATION
 	printf("Validation layers are enabled\n\n");
-	inst_ret = inst_ret.use_default_debug_messenger().set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT);
+	inst_ret = inst_ret.use_default_debug_messenger();
 #else
 	printf("Validation layers are disabled\n\n");
 #endif
@@ -351,7 +365,7 @@ void VulkanEngine::init_vulkan()
 
 	_instance = vkb_inst.instance;
 
-#if IS_DEBUG
+#if ENABLE_VALIDATION
 	_debug_messenger = vkb_inst.debug_messenger;
 	inst_ret = inst_ret.use_default_debug_messenger();
 #else
@@ -428,8 +442,17 @@ void VulkanEngine::init_default_renderpass()
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	if (samples > VK_SAMPLE_COUNT_1_BIT) color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	else color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	if (!_isHeadless) {
+		if (samples > VK_SAMPLE_COUNT_1_BIT) {
+			color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
+		else {
+			color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		}
+	}
+	else {
+		color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
 
 	VkAttachmentReference color_attachment_ref = {};
 	color_attachment_ref.attachment = 0;
@@ -458,7 +481,12 @@ void VulkanEngine::init_default_renderpass()
 	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	if (!_isHeadless) {
+		colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	}
+	else {
+		colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	}
 
 	VkAttachmentReference color_attachment_resolve_ref{};
 	color_attachment_resolve_ref.attachment = 2;
@@ -835,6 +863,173 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 	VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &newBuffer._buffer, &newBuffer._allocation, NULL));
 
 	return newBuffer;
+}
+
+void VulkanEngine::submitWork(VkCommandBuffer cmdBuffer, VkQueue queue)
+{
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuffer;
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	VkFence fence;
+	vkCreateFence(_device, &fenceInfo, NULL, &fence);
+	vkQueueSubmit(queue, 1, &submitInfo, fence);
+	vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkDestroyFence(_device, fence, NULL);
+}
+
+uint32_t VulkanEngine::getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) {
+	VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(_chosenGPU, &deviceMemoryProperties);
+	for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++) {
+		if ((typeBits & 1) == 1) {
+			if ((deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				return i;
+			}
+		}
+		typeBits >>= 1;
+	}
+	return 0;
+}
+
+void VulkanEngine::getImageData(char* imagedata) {
+	
+	// Create the linear tiled destination image to copy to and to read the memory from
+	VkImageCreateInfo imgCreateInfo = {};
+	imgCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	imgCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+	imgCreateInfo.extent.width = _swapChain->extent.width;
+	imgCreateInfo.extent.height = _swapChain->extent.height;
+	imgCreateInfo.extent.depth = 1;
+	imgCreateInfo.arrayLayers = 1;
+	imgCreateInfo.mipLevels = 1;
+	imgCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	imgCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imgCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
+	imgCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	// Create the image
+	VkImage dstImage;
+	vkCreateImage(_device, &imgCreateInfo, nullptr, &dstImage);
+	// Create memory to back up the image
+	VkMemoryRequirements memRequirements;
+	VkMemoryAllocateInfo memAllocInfo = {};
+	memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	VkDeviceMemory dstImageMemory;
+	vkGetImageMemoryRequirements(_device, dstImage, &memRequirements);
+	memAllocInfo.allocationSize = memRequirements.size;
+	// Memory must be host visible to copy from
+	memAllocInfo.memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	VK_CHECK(vkAllocateMemory(_device, &memAllocInfo, nullptr, &dstImageMemory));
+	VK_CHECK(vkBindImageMemory(_device, dstImage, dstImageMemory, 0));
+
+	// Do the actual blit from the offscreen image to our host visible destination image
+	VkCommandBufferAllocateInfo cmdBufAllocateInfo = vkinit::command_buffer_allocate_info(_frames[_frameNumber % FRAME_OVERLAP]._commandPool,
+		1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	VkCommandBuffer copyCmd;
+	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdBufAllocateInfo, &copyCmd));
+	VkCommandBufferBeginInfo cmdBufInfo = {};
+	cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	VK_CHECK(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
+
+	// Transition destination image to transfer destination layout
+	vkutil::insertImageMemoryBarrier(
+		copyCmd,
+		dstImage,
+		0,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+	);
+
+	VkImageCopy imageCopyRegion{};
+	imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageCopyRegion.srcSubresource.layerCount = 1;
+	imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageCopyRegion.dstSubresource.layerCount = 1;
+	imageCopyRegion.extent.width = _swapChain->extent.width;
+	imageCopyRegion.extent.height = _swapChain->extent.height;
+	imageCopyRegion.extent.depth = 1;
+	
+	vkCmdCopyImage(
+		copyCmd,
+		_swapChain->headlessImages[_frameNumber % FRAME_OVERLAP]._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1,
+		&imageCopyRegion
+	);
+
+	// Transition destination image to general layout, which is the required layout for mapping the image memory later on
+	vkutil::insertImageMemoryBarrier(
+		copyCmd,
+		dstImage,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_GENERAL,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+	);
+
+	VK_CHECK(vkEndCommandBuffer(copyCmd));
+
+	submitWork(copyCmd, _graphicsQueue);
+
+	// Get layout of the image (including row pitch)
+	VkImageSubresource subResource{};
+	subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	VkSubresourceLayout subResourceLayout;
+
+	vkGetImageSubresourceLayout(_device, dstImage, &subResource, &subResourceLayout);
+	
+	vkMapMemory(_device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imagedata);
+	imagedata += subResourceLayout.offset;
+	
+	char* n[10] = {	"headless0.ppm", "headless1.ppm", "headless2.ppm", "headless3.ppm", "headless4.ppm", "headless5.ppm", "headless6.ppm",
+					"headless7.ppm", "headless8.ppm", "headless9.ppm" };
+
+	std::ofstream file(n[_frameNumber], std::ios::out | std::ios::binary);
+
+	// ppm header
+	file << "P6\n" << _swapChain->extent.width << "\n" << _swapChain->extent.height << "\n" << 255 << "\n";
+	
+	// If source is BGR (destination is always RGB) and we can't use blit (which does automatic conversion), we'll have to manually swizzle color components
+	// Check if source is BGR and needs swizzle
+	std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM };
+	const bool colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), VK_FORMAT_R8G8B8A8_UNORM) != formatsBGR.end());
+
+	// ppm binary pixel data
+	for (int32_t y = 0; y < _swapChain->extent.height; y++) {
+		unsigned int* row = (unsigned int*)imagedata;
+		for (int32_t x = 0; x < _swapChain->extent.width; x++) {
+			if (colorSwizzle) {
+				file.write((char*)row + 2, 1);
+				file.write((char*)row + 1, 1);
+				file.write((char*)row, 1);
+			}
+			else {
+				file.write((char*)row, 3);
+			}
+			row++;
+		}
+		imagedata += subResourceLayout.rowPitch;
+	}
+	file.close();
+
+	printf("Framebuffer image saved to %s\n", n[_frameNumber]);
+
+	// Clean up resources
+	vkUnmapMemory(_device, dstImageMemory);
+	vkFreeMemory(_device, dstImageMemory, nullptr);
+	vkDestroyImage(_device, dstImage, nullptr);
+	vkFreeCommandBuffers(_device, _frames[_frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)

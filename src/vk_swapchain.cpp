@@ -4,7 +4,15 @@
 SwapChain::SwapChain(void* engine){
 
     this->engine = engine;
-    create();
+
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
+
+    if (vulkanEngine->_isHeadless) {
+        createHeadless();
+    }
+    else {
+        create();
+    }
 }
 
 void SwapChain::create(){
@@ -48,6 +56,39 @@ void SwapChain::create(){
     createDepthResources();
 }
 
+void SwapChain::createHeadless() {
+    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
+
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
+    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+    swapchainImageFormat = surfaceFormat.format;
+
+    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+    extent = chooseSwapExtent(swapChainSupport.capabilities);
+
+    VkExtent3D headlessImageExtent = { extent.width, extent.height, 1 };
+
+    VkImageCreateInfo hsimg_info = vkinit::image_create_info(swapchainImageFormat,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, headlessImageExtent, VK_SAMPLE_COUNT_1_BIT);
+
+    VmaAllocationCreateInfo hsimg_allocinfo = {};
+    hsimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    hsimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    headlessImages.resize(FRAME_OVERLAP);
+    headlessImageViews.resize(FRAME_OVERLAP);
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        vmaCreateImage(vulkanEngine->_allocator, &hsimg_info, &hsimg_allocinfo, &headlessImages[i]._image, &headlessImages[i]._allocation, NULL);
+
+        VkImageViewCreateInfo hsview_info = vkinit::imageview_create_info(swapchainImageFormat, headlessImages[i]._image, VK_IMAGE_ASPECT_COLOR_BIT);
+        vkCreateImageView(vulkanEngine->_device, &hsview_info, NULL, &headlessImageViews[i]);
+    }
+    
+
+    if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) createColorResources();
+    createDepthResources();
+}
+
 void SwapChain::creationLoop() {
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
@@ -68,12 +109,21 @@ void SwapChain::creationLoop() {
 void SwapChain::destroy(){
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
-    for (int i = 0; i < swapchainImageViews.size(); i++) {
-		vkDestroyFramebuffer(vulkanEngine->_device, framebuffers[i], NULL);
-        vkDestroyImageView(vulkanEngine->_device, swapchainImageViews[i], NULL);
+    if (!vulkanEngine->_isHeadless) {
+        for (int i = 0; i < swapchainImageViews.size(); i++) {
+            vkDestroyFramebuffer(vulkanEngine->_device, framebuffers[i], NULL);
+            vkDestroyImageView(vulkanEngine->_device, swapchainImageViews[i], NULL);
+        }
+    }
+    else {
+        for (int i = 0; i < headlessImageViews.size(); i++) {
+            vkDestroyFramebuffer(vulkanEngine->_device, framebuffers[i], NULL);
+            vkDestroyImageView(vulkanEngine->_device, headlessImageViews[i], NULL);
+            vmaDestroyImage(vulkanEngine->_allocator, headlessImages[i]._image, headlessImages[i]._allocation);
+        }
     }
 
-    vkDestroySwapchainKHR(vulkanEngine->_device, swapChain, NULL);
+    if (!vulkanEngine->_isHeadless) vkDestroySwapchainKHR(vulkanEngine->_device, swapChain, NULL);
     vkDestroyImageView(vulkanEngine->_device, depthImageView, NULL);
     vmaDestroyImage(vulkanEngine->_allocator, depthImage._image, depthImage._allocation);
     if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) {
@@ -123,9 +173,15 @@ void SwapChain::createColorResources() {
         1
     };
 
-    VkImageCreateInfo cimg_info = vkinit::image_create_info(swapchainImageFormat,
-        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, colorImageExtent, vulkanEngine->samples);
-
+    VkImageCreateInfo cimg_info;
+    if (!vulkanEngine->_isHeadless) {
+        cimg_info  = vkinit::image_create_info(swapchainImageFormat,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, colorImageExtent, vulkanEngine->samples);
+    }
+    else {
+        cimg_info = vkinit::image_create_info(swapchainImageFormat,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, colorImageExtent, vulkanEngine->samples);
+    }
     VmaAllocationCreateInfo cimg_allocinfo = {};
     cimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     cimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -171,19 +227,26 @@ void SwapChain::createFrameBuffers(){
 	fb_info.pNext = NULL;
 
 	fb_info.renderPass = vulkanEngine->_renderPass;
-	fb_info.attachmentCount = 1;
 	fb_info.width = extent.width;
 	fb_info.height = extent.height;
 	fb_info.layers = 1;
 
-	const uint32_t swapchain_imagecount = swapchainImages.size();
+    uint32_t swapchain_imagecount;
+    if (!vulkanEngine->_isHeadless) swapchain_imagecount = swapchainImages.size();
+    else swapchain_imagecount = headlessImages.size();
 	framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
 	for (int i = 0; i < swapchain_imagecount; i++) {
 
 		std::vector<VkImageView> attachments;
-        if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) attachments = { colorImageView, depthImageView, swapchainImageViews[i] };
-        else attachments = { swapchainImageViews[i], depthImageView };
+        if (!vulkanEngine->_isHeadless) {
+            if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) attachments = { colorImageView, depthImageView, swapchainImageViews[i] };
+            else attachments = { swapchainImageViews[i], depthImageView };
+        }
+        else {
+            if (vulkanEngine->samples > VK_SAMPLE_COUNT_1_BIT) attachments = { colorImageView, depthImageView, headlessImageViews[i] };
+            else attachments = { headlessImageViews[i], depthImageView };
+        }
         
 		fb_info.pAttachments = attachments.data();
 		fb_info.attachmentCount = attachments.size();

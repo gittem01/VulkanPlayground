@@ -29,7 +29,11 @@ public:
     VkImageView colorImageView;
     AllocatedImage colorImage;
 
+    std::vector<VkImageView> headlessImageViews;
+    std::vector<AllocatedImage>  headlessImages;
+
     void create();
+    void createHeadless();
     void destroy();
     void creationLoop();
 
