@@ -40,9 +40,8 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 	vmaCreateImage(vulkanEngine->_allocator, &dimg_info, &dimg_allocinfo, &newImage._image, &newImage._allocation, NULL);
-
+	
 	vulkanEngine->immediate_submit([&](VkCommandBuffer cmd) {
-
 		VkImageMemoryBarrier imageBarrier_toTransfer = vkutil::insertImageMemoryBarrier(cmd, newImage._image, 0,
 			VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -73,7 +72,7 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
 			NULL, 0, NULL, 1, &imageBarrier_toReadable);
 	});
-
+	
 	vmaDestroyBuffer(vulkanEngine->_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
 	std::cout << "Texture file: " << fileName << " loaded successfully " << std::endl;
@@ -83,7 +82,7 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 	return true;
 }
 
-VkImageMemoryBarrier& vkutil::insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
+VkImageMemoryBarrier vkutil::insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
 	VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
 	VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkImageSubresourceRange subresourceRange)
 {

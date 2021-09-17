@@ -53,7 +53,7 @@ void VulkanEngine::init()
 	_swapChain->createFrameBuffers();
 	
 	init_commands();
-		
+
 	init_sync_structures();
 	
 	init_descriptors();
@@ -786,7 +786,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 
 void VulkanEngine::get_image(std::string imagePath, const char* imageName, VkFilter filter) {
 	Texture tex; // texture handling will be done in a separate class in the future
-
+	
 	vkutil::load_image(this, imagePath, tex.image);
 
 	VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, tex.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
