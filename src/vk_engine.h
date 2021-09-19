@@ -93,7 +93,7 @@ public:
 	SwapChain* _swapChain;
 
 	bool _isInitialized = false;
-	bool _isHeadless = false; // still testing...
+	bool _isHeadless = true; // still testing...
 	uint32_t lastSwapchainImageIndex;
 	int _frameNumber = 0;
 
@@ -186,5 +186,5 @@ private:
 	void upload_mesh(Mesh& mesh);
 	void submitWork(VkCommandBuffer cmdBuffer, VkQueue queue);
 	uint32_t getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
-	void getImageData(char* imagedata);
+	void getImageData();
 };

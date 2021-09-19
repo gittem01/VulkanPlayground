@@ -264,8 +264,7 @@ void VulkanEngine::render()
 		}
 	}
 	else {
-		char* c = NULL;
-		getImageData(c);
+		getImageData();
 	}
 
 	_frameNumber++;
@@ -894,8 +893,8 @@ uint32_t VulkanEngine::getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFla
 	return 0;
 }
 
-void VulkanEngine::getImageData(char* imagedata) {
-	
+void VulkanEngine::getImageData() {
+	char* imageData = 0;
 	// Create the linear tiled destination image to copy to and to read the memory from
 	VkImageCreateInfo imgCreateInfo = {};
 	imgCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -912,7 +911,7 @@ void VulkanEngine::getImageData(char* imagedata) {
 	imgCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	// Create the image
 	VkImage dstImage;
-	vkCreateImage(_device, &imgCreateInfo, nullptr, &dstImage);
+	vkCreateImage(_device, &imgCreateInfo, NULL, &dstImage);
 	// Create memory to back up the image
 	VkMemoryRequirements memRequirements;
 	VkMemoryAllocateInfo memAllocInfo = {};
@@ -989,41 +988,10 @@ void VulkanEngine::getImageData(char* imagedata) {
 
 	vkGetImageSubresourceLayout(_device, dstImage, &subResource, &subResourceLayout);
 	
-	vkMapMemory(_device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imagedata);
-	imagedata += subResourceLayout.offset;
+	vkMapMemory(_device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imageData);
+	imageData += subResourceLayout.offset;
 	
-	char* n[10] = {	"headless0.ppm", "headless1.ppm", "headless2.ppm", "headless3.ppm", "headless4.ppm", "headless5.ppm", "headless6.ppm",
-					"headless7.ppm", "headless8.ppm", "headless9.ppm" };
-
-	std::ofstream file(n[_frameNumber], std::ios::out | std::ios::binary);
-
-	// ppm header
-	file << "P6\n" << _swapChain->extent.width << "\n" << _swapChain->extent.height << "\n" << 255 << "\n";
-	
-	// If source is BGR (destination is always RGB) and we can't use blit (which does automatic conversion), we'll have to manually swizzle color components
-	// Check if source is BGR and needs swizzle
-	std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM };
-	const bool colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), VK_FORMAT_R8G8B8A8_UNORM) != formatsBGR.end());
-
-	// ppm binary pixel data
-	for (int32_t y = 0; y < _swapChain->extent.height; y++) {
-		unsigned int* row = (unsigned int*)imagedata;
-		for (int32_t x = 0; x < _swapChain->extent.width; x++) {
-			if (colorSwizzle) {
-				file.write((char*)row + 2, 1);
-				file.write((char*)row + 1, 1);
-				file.write((char*)row, 1);
-			}
-			else {
-				file.write((char*)row, 3);
-			}
-			row++;
-		}
-		imagedata += subResourceLayout.rowPitch;
-	}
-	file.close();
-
-	printf("Framebuffer image saved to %s\n", n[_frameNumber]);
+	printf("Frame: %d, %d\n", _frameNumber, subResourceLayout.size);
 
 	// Clean up resources
 	vkUnmapMemory(_device, dstImageMemory);

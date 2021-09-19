@@ -3,6 +3,7 @@
 project (VulkanPlayground)
 
 set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/debug)
 
 add_subdirectory ("third_party/SDL")
 include_directories("third_party/SDL/include")
