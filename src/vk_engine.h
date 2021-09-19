@@ -93,7 +93,7 @@ public:
 	SwapChain* _swapChain;
 
 	bool _isInitialized = false;
-	bool _isHeadless = true; // still testing...
+	bool _isHeadless = false; // still testing...
 	uint32_t lastSwapchainImageIndex;
 	int _frameNumber = 0;
 
