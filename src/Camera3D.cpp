@@ -8,7 +8,8 @@ Camera3D::Camera3D(glm::vec3 pos, WindowHandler* wp) {
 	this->rotAim = glm::vec3(0, 0, 0);
 
 	this->wp = wp;
-	this->window = wp->window;
+	if (wp) this->window = wp->window;
+	else this->window = NULL;
 
 	this->rightVec = glm::normalize(glm::cross(topVec, lookDir));
 
@@ -72,26 +73,28 @@ void Camera3D::updateZoom() {
 
 void Camera3D::update()
 {
-	int width, height;
-	SDL_GetWindowSize(this->window, &width, &height);
-	this->w = width; this->h = height;
-
 	speedMult = BASE_MULT;
 
-	updatePos();
+	if (wp) {
+		int width, height;
+		SDL_GetWindowSize(this->window, &width, &height);
+		this->w = width; this->h = height;
 
-	updateZoom();
+		updatePos();
 
-	rotateFunc();
+		updateZoom();
+
+		rotateFunc();
+	}
 
 	rightVec = glm::normalize(glm::cross(topVec, lookDir));
 	
-	pers = getPers(width, height);
+	pers = getPers(w, h);
 	view = getView(true);
 
 	pers[1][1] *= -1;
 
-	if (wp->keyData[SDL_SCANCODE_TAB] == 2) {
+	if (wp && wp->keyData[SDL_SCANCODE_TAB] == 2) {
 		if (cameraType == SURROUNDER)
 			cameraType = WALKER;
 		else if (cameraType == WALKER)

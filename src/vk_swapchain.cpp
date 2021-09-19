@@ -59,12 +59,9 @@ void SwapChain::create(){
 void SwapChain::createHeadless() {
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
-    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    swapchainImageFormat = surfaceFormat.format;
+    swapchainImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
-    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    extent = chooseSwapExtent(swapChainSupport.capabilities);
+    extent = vulkanEngine->_windowExtent;
 
     VkExtent3D headlessImageExtent = { extent.width, extent.height, 1 };
 

@@ -25,7 +25,7 @@ VulkanEngine::~VulkanEngine() {
 
 bool VulkanEngine::looper()
 {
-	if (!wHandler->looper()) return true;
+	if (!_isHeadless && !wHandler->looper()) return true;
 	camera->update();
 	render();
 
@@ -38,9 +38,15 @@ bool VulkanEngine::looper()
 
 void VulkanEngine::init()
 {
-	wHandler = new WindowHandler(_windowExtent.width, _windowExtent.height);
-	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
-	_window = wHandler->window;
+	if (!_isHeadless) {
+		wHandler = new WindowHandler(_windowExtent.width, _windowExtent.height);
+		camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
+		_window = wHandler->window;
+	}
+	else {
+		camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), NULL);
+		_window = NULL;
+	}
 	
 	init_vulkan();
 
@@ -349,8 +355,10 @@ void VulkanEngine::init_vulkan()
 {
 	vkb::InstanceBuilder builder;
 
-	auto inst_ret = builder.set_app_name("AppX")
+	auto inst_ret = builder
+		.set_app_name("AppX")
 		.request_validation_layers(ENABLE_VALIDATION)
+		.set_headless(_isHeadless)
 		.require_api_version(1, 2, 0);
 
 #if ENABLE_VALIDATION
@@ -371,8 +379,10 @@ void VulkanEngine::init_vulkan()
 	_debug_messenger = NULL;
 #endif
 	
-	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
-		
+	if (!_isHeadless)
+		SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
+	else _surface = VK_NULL_HANDLE;
+
 	VkPhysicalDeviceFeatures features = {};
 	features.fillModeNonSolid = VK_TRUE;
 	features.wideLines = VK_TRUE;
@@ -381,13 +391,13 @@ void VulkanEngine::init_vulkan()
 	features11.shaderDrawParameters = VK_TRUE;
 
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
-	vkb::PhysicalDevice physicalDevice = selector
-		.set_minimum_version(1, 0)
-		.set_surface(_surface)
+	selector = selector.set_minimum_version(1, 2)
 		.set_required_features(features)
-		.set_required_features_11(features11)
-		.select()
-		.value();
+		.set_required_features_11(features11);
+
+	if (!_isHeadless)
+		selector = selector.set_surface(_surface);
+	vkb::PhysicalDevice physicalDevice = selector.select().value();
 
 	// .prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
 
@@ -991,7 +1001,7 @@ void VulkanEngine::getImageData() {
 	vkMapMemory(_device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imageData);
 	imageData += subResourceLayout.offset;
 	
-	printf("Frame: %d, %d\n", _frameNumber, subResourceLayout.size);
+	printf("Frame: %d\n", _frameNumber);
 
 	// Clean up resources
 	vkUnmapMemory(_device, dstImageMemory);
