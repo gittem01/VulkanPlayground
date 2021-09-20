@@ -171,7 +171,7 @@ void VulkanEngine::cleanup(){
 	}
 }
 
-FrameData& VulkanEngine::get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; }
+FrameData& VulkanEngine::get_current_frame() { return _frames[wHandler->frameNumber % FRAME_OVERLAP]; }
 
 
 void VulkanEngine::render()
@@ -180,7 +180,8 @@ void VulkanEngine::render()
 
 	VkResult result;
 	if (!_isHeadless) {
-		result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX, get_current_frame()._presentSemaphore, NULL, &lastSwapchainImageIndex);
+		result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX, 
+			get_current_frame()._presentSemaphore, NULL, &lastSwapchainImageIndex);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 			windowResizeEvent();
@@ -219,11 +220,10 @@ void VulkanEngine::render()
 	if (!_isHeadless)
 		rpInfo.framebuffer = _swapChain->framebuffers[lastSwapchainImageIndex];
 	else
-		rpInfo.framebuffer = _swapChain->framebuffers[_frameNumber % FRAME_OVERLAP];
+		rpInfo.framebuffer = _swapChain->framebuffers[wHandler->frameNumber % FRAME_OVERLAP];
+		
 	rpInfo.clearValueCount = 2;
-
 	VkClearValue clearValues[] = { clearValue, depthClear };
-
 	rpInfo.pClearValues = &clearValues[0];
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -272,8 +272,6 @@ void VulkanEngine::render()
 	else {
 		getImageData();
 	}
-
-	_frameNumber++;
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
@@ -286,7 +284,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	uint32_t fullSize = pad_uniform_buffer_size(sizeof(GPUCameraData)) + pad_uniform_buffer_size(sizeof(GPUSceneData));
 	char* data;
 	vmaMapMemory(_allocator, _worldBuffers._allocation, (void**)&data);
-	int frameIndex = _frameNumber % FRAME_OVERLAP;
+	int frameIndex = wHandler->frameNumber % FRAME_OVERLAP;
 	data += fullSize * frameIndex;
 	memcpy(data, &camData, sizeof(GPUCameraData));
 	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
@@ -298,7 +296,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	
 	char* sceneData;
 	vmaMapMemory(_allocator, _worldBuffers._allocation , (void**)&sceneData);
-	frameIndex = _frameNumber % FRAME_OVERLAP;
+	frameIndex = wHandler->frameNumber % FRAME_OVERLAP;
 	sceneData += 	fullSize * frameIndex + 
 					pad_uniform_buffer_size(sizeof(GPUCameraData));
 	memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
@@ -936,7 +934,7 @@ void VulkanEngine::getImageData() {
 	VK_CHECK(vkBindImageMemory(_device, dstImage, dstImageMemory, 0));
 
 	// Do the actual blit from the offscreen image to our host visible destination image
-	VkCommandBufferAllocateInfo cmdBufAllocateInfo = vkinit::command_buffer_allocate_info(_frames[_frameNumber % FRAME_OVERLAP]._commandPool,
+	VkCommandBufferAllocateInfo cmdBufAllocateInfo = vkinit::command_buffer_allocate_info(_frames[wHandler->frameNumber % FRAME_OVERLAP]._commandPool,
 		1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	VkCommandBuffer copyCmd;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdBufAllocateInfo, &copyCmd));
@@ -968,7 +966,7 @@ void VulkanEngine::getImageData() {
 	
 	vkCmdCopyImage(
 		copyCmd,
-		_swapChain->headlessImages[_frameNumber % FRAME_OVERLAP]._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		_swapChain->headlessImages[wHandler->frameNumber % FRAME_OVERLAP]._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1,
 		&imageCopyRegion
@@ -1001,13 +999,13 @@ void VulkanEngine::getImageData() {
 	vkMapMemory(_device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imageData);
 	imageData += subResourceLayout.offset;
 	
-	printf("Frame: %d\n", _frameNumber);
+	printf("Frame: %d\n", wHandler->frameNumber);
 
 	// Clean up resources
 	vkUnmapMemory(_device, dstImageMemory);
 	vkFreeMemory(_device, dstImageMemory, nullptr);
 	vkDestroyImage(_device, dstImage, nullptr);
-	vkFreeCommandBuffers(_device, _frames[_frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
+	vkFreeCommandBuffers(_device, _frames[wHandler->frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)

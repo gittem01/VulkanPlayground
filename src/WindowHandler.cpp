@@ -3,15 +3,22 @@
 WindowHandler::WindowHandler(int w, int h) {
     lastMousePos[0] = INT_MIN; lastMousePos[1] = INT_MIN;
     this->massInit(w, h);
+    this->lastTime = SDL_GetTicks();
+    this->deltaTimeMs = 0;
+    this->deltaTimeSc = 0.0f;
+    this->fps = 0;
+    this->frameNumber = 0;
+    this->totalFps = 0;
+    this->titleTime = UINT32_MAX;
 }
 
 void WindowHandler::massInit(int w, int h) {
     SDL_Init(SDL_INIT_VIDEO);
-
+    SDL_GetTicks();
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
     window = SDL_CreateWindow(
-        "Test Space",
+        "",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         w, h,
@@ -49,7 +56,36 @@ int WindowHandler::looper() {
     lastMousePos[0] = mouseData[0];
     lastMousePos[1] = mouseData[1];
 
+    handleTime();
+    if (titleTime > REFRESH_INTERVAL){
+        char strFPS[10] = "Fps: ";
+        SDL_uitoa(fps, &strFPS[5], 10);
+        SDL_SetWindowTitle(window, strFPS);
+        titleTime = 0;
+    }
+
+    frameNumber++;
+
     return 1;
+}
+
+void WindowHandler::handleTime(){
+    uint32_t currentTime = SDL_GetTicks();
+    deltaTimeMs = currentTime - lastTime;
+    deltaTimeSc = deltaTimeMs / 1000.0f;
+
+    totalFps -= fpsArray[frameNumber % FPSCALCSIZE];
+    if (deltaTimeMs > 0){
+        fpsArray[frameNumber % FPSCALCSIZE] = 1000 / deltaTimeMs;
+    }
+    else{
+        fpsArray[frameNumber % FPSCALCSIZE] = 0;
+    }
+    
+    totalFps += fpsArray[frameNumber % FPSCALCSIZE];
+    fps = totalFps / FPSCALCSIZE;
+    lastTime = currentTime;
+    titleTime += deltaTimeMs;
 }
 
 int WindowHandler::eventHandler() {

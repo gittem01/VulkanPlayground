@@ -95,7 +95,6 @@ public:
 	bool _isInitialized = false;
 	bool _isHeadless = false; // still testing...
 	uint32_t lastSwapchainImageIndex;
-	int _frameNumber = 0;
 
 	VkSampleCountFlagBits desiredSamples = VK_SAMPLE_COUNT_4_BIT;
 	VkSampleCountFlagBits samples;
