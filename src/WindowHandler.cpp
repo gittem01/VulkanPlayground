@@ -2,7 +2,6 @@
 
 WindowHandler::WindowHandler(int w, int h) {
     lastMousePos[0] = INT_MIN; lastMousePos[1] = INT_MIN;
-    this->massInit(w, h);
     this->lastTime = SDL_GetTicks();
     this->deltaTimeMs = 0;
     this->deltaTimeSc = 0.0f;
@@ -10,9 +9,10 @@ WindowHandler::WindowHandler(int w, int h) {
     this->frameNumber = 0;
     this->totalFps = 0;
     this->titleTime = UINT32_MAX;
+    this->winExtent.width = w; this->winExtent.height = h;
 }
 
-void WindowHandler::massInit(int w, int h) {
+void WindowHandler::init() {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GetTicks();
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -21,7 +21,7 @@ void WindowHandler::massInit(int w, int h) {
         "",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        w, h,
+        winExtent.width, winExtent.height,
         window_flags
     );
 }
@@ -56,6 +56,12 @@ int WindowHandler::looper() {
     lastMousePos[0] = mouseData[0];
     lastMousePos[1] = mouseData[1];
 
+    timeUpdate();
+
+    return 1;
+}
+
+void WindowHandler::timeUpdate(){
     handleTime();
     if (titleTime > REFRESH_INTERVAL){
         char strFPS[10] = "Fps: ";
@@ -65,8 +71,6 @@ int WindowHandler::looper() {
     }
 
     frameNumber++;
-
-    return 1;
 }
 
 void WindowHandler::handleTime(){

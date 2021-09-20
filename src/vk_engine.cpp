@@ -26,7 +26,10 @@ VulkanEngine::~VulkanEngine() {
 bool VulkanEngine::looper()
 {
 	if (!_isHeadless && !wHandler->looper()) return true;
+	else if (_isHeadless) wHandler->timeUpdate();
+
 	camera->update();
+
 	render();
 
 	if (_isHeadless) {
@@ -38,8 +41,10 @@ bool VulkanEngine::looper()
 
 void VulkanEngine::init()
 {
+	wHandler = new WindowHandler(_windowExtent.width, _windowExtent.height);
+
 	if (!_isHeadless) {
-		wHandler = new WindowHandler(_windowExtent.width, _windowExtent.height);
+		wHandler->init();
 		camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
 		_window = wHandler->window;
 	}
@@ -188,7 +193,7 @@ void VulkanEngine::render()
 			return;
 		}
 	}
-	
+
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 	VK_CHECK(vkResetCommandBuffer(get_current_frame()._mainCommandBuffer, 0));
 

@@ -33,9 +33,13 @@ public:
 	float deltaTimeSc;
 	uint32_t fps;
 	uint32_t frameNumber;
+	VkExtent2D winExtent;
 
 	WindowHandler(int w, int h);
-	
+	void init();
+
+	void timeUpdate();
+
 	int looper();
 
 private:
@@ -43,7 +47,6 @@ private:
 	uint32_t lastTime;
 	uint32_t titleTime;
 
-	void massInit(int w, int h);
 	int eventHandler();
 	void handleTime();
 	void clearMouseData();

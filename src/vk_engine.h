@@ -132,7 +132,7 @@ public:
 
 	UploadContext _uploadContext;
 
-	VkExtent2D _windowExtent = { 1200 , 700 };
+	VkExtent2D _windowExtent = { 1300 , 700 };
 
 	struct SDL_Window* _window{ NULL };
 
