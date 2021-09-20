@@ -5,7 +5,7 @@ float getRand01() {
 }
 
 void createObjects(VulkanEngine& engine) {
-	int n = 200;
+	int n = 400;
 	for (int i = 0; i < n; i++) {
 		RenderObject monkey;
 		monkey.meshName = "monkey";

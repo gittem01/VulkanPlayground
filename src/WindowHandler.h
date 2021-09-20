@@ -11,8 +11,7 @@
 
 #define MOUSEMAX 6
 #define KEYMAX 512
-#define FPSCALCSIZE 10
-#define REFRESH_INTERVAL 1000 // 1 sec
+#define REFRESH_INTERVAL 400 // 0.4 sec
 
 class WindowHandler
 {
@@ -22,8 +21,6 @@ public:
 
 	int* lastMousePos = (int*)calloc(2, sizeof(int));
 	int* moveDiff = (int*)calloc(2, sizeof(int));
-
-	uint32_t* fpsArray = (uint32_t*)calloc(FPSCALCSIZE, sizeof(uint32_t));
 
 	glm::vec2 lastWinPos, lastWinSize;
 
@@ -43,8 +40,9 @@ public:
 	int looper();
 
 private:
-	uint32_t totalFps;
 	uint32_t lastTime;
+	uint32_t totalMs;
+	uint32_t msCounter;
 	uint32_t titleTime;
 
 	int eventHandler();

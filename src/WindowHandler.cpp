@@ -7,7 +7,8 @@ WindowHandler::WindowHandler(int w, int h) {
     this->deltaTimeSc = 0.0f;
     this->fps = 0;
     this->frameNumber = 0;
-    this->totalFps = 0;
+    this->totalMs = 0;
+    this->msCounter = 0;
     this->titleTime = UINT32_MAX;
     this->winExtent.width = w; this->winExtent.height = h;
 }
@@ -63,11 +64,14 @@ int WindowHandler::looper() {
 
 void WindowHandler::timeUpdate(){
     handleTime();
-    if (titleTime > REFRESH_INTERVAL){
+    if (window && titleTime > REFRESH_INTERVAL){
         char strFPS[10] = "Fps: ";
-        SDL_uitoa(fps, &strFPS[5], 10);
+        fps = (1000 * msCounter) / totalMs;
+        SDL_uitoa((int)fps, &strFPS[5], 10);
         SDL_SetWindowTitle(window, strFPS);
         titleTime = 0;
+        totalMs = 0;
+        msCounter = 0;
     }
 
     frameNumber++;
@@ -76,19 +80,12 @@ void WindowHandler::timeUpdate(){
 void WindowHandler::handleTime(){
     uint32_t currentTime = SDL_GetTicks();
     deltaTimeMs = currentTime - lastTime;
-    deltaTimeSc = deltaTimeMs / 1000.0f;
-
-    totalFps -= fpsArray[frameNumber % FPSCALCSIZE];
-    if (deltaTimeMs > 0){
-        fpsArray[frameNumber % FPSCALCSIZE] = 1000 / deltaTimeMs;
-    }
-    else{
-        fpsArray[frameNumber % FPSCALCSIZE] = 0;
-    }
-    
-    totalFps += fpsArray[frameNumber % FPSCALCSIZE];
-    fps = totalFps / FPSCALCSIZE;
     lastTime = currentTime;
+    deltaTimeSc = deltaTimeMs / 1000.0f;
+    
+    totalMs += deltaTimeMs;
+    msCounter++;
+    
     titleTime += deltaTimeMs;
 }
 
