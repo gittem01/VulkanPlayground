@@ -7,6 +7,9 @@ Camera3D::Camera3D(glm::vec3 pos, WindowHandler* wp) {
 	this->rot = glm::vec3(0, 0, 0);
 	this->rotAim = glm::vec3(0, 0, 0);
 
+	this->zoom = 45.0f;
+	this->zoomAim = 0.0f;
+
 	this->wp = wp;
 	if (wp) this->window = wp->window;
 	else this->window = NULL;
@@ -22,7 +25,7 @@ Camera3D::Camera3D(glm::vec3 pos, WindowHandler* wp) {
 
 glm::mat4 Camera3D::getPers(int width, int height)
 {
-	return glm::perspective(glm::radians(45.0f / this->zoom), (float)width / (float)height, 0.001f, 500.0f);
+	return glm::perspective(glm::radians(zoom), (float)width / (float)height, 0.001f, 500.0f);
 }
 
 glm::mat4 Camera3D::getView(bool posIncl)
@@ -55,9 +58,9 @@ float Camera3D::limitZoom(float inZoom)
 void Camera3D::updateZoom() {
 	if (cameraType == WALKER) {
 		if (wp->mouseData[5] != 0) {
-			zoomAim += 0.1f * this->wp->mouseData[5];
+			zoomAim -= this->wp->mouseData[5] * 2.5f;
 		}
-		float diff = zoomAim * zoomSmth;
+		float diff = zoomAim * zoomSmth * wp->deltaTimeSc;
 		changeZoom(diff);
 		zoomAim -= diff;
 	}
@@ -65,7 +68,7 @@ void Camera3D::updateZoom() {
 		if (wp->mouseData[5] != 0) {
 			posAim += lookDir * (float)wp->mouseData[5] * speedMult;
 		}
-		glm::vec3 diff = posAim * posSmth;
+		glm::vec3 diff = posAim * wheelPosSmth * wp->deltaTimeSc;
 		pos += diff;
 		posAim -= diff;
 	}
@@ -141,7 +144,7 @@ void Camera3D::updateLookDir() {
 			posAim += rightVec * (wp->moveDiff[0] * 0.01f);
 			posAim += yVec * (wp->moveDiff[1] * 0.01f);
 		}
-		glm::vec3 diff = posAim * posSmth;
+		glm::vec3 diff = posAim * wheelPosSmth * wp->deltaTimeSc;
 		pos += diff;
 		posAim -= diff;
 	}
@@ -154,7 +157,7 @@ void Camera3D::rotateFunc()
 		rotAim.y += wp->moveDiff[0] * 0.002f;
 	}
 
-	glm::vec3 diff = rotAim * rotSmth;
+	glm::vec3 diff = rotAim * rotSmth * wp->deltaTimeSc;
 	rot += diff;
 	rotAim -= diff;
 	controlRotation(&rot);
@@ -181,7 +184,6 @@ void Camera3D::keyControl() {
 
 void Camera3D::updateWlkrPos()
 {	
-	
 	glm::vec3 speedAddition = glm::vec3(0, 0, 0);
 
 	if (wp->keyData[SDL_SCANCODE_W]) {
@@ -215,8 +217,8 @@ void Camera3D::updateWlkrPos()
 		speedAddition.y -= freeSpeed;
 	}
 
-	posAim += speedAddition * speedMult;
-	glm::vec3 diff = posAim * posSmth;
+	posAim += speedAddition * speedMult * wp->deltaTimeSc;
+	glm::vec3 diff = posAim * keyPosSmth * wp->deltaTimeSc;
 	pos += diff;
 	posAim -= diff;
 }

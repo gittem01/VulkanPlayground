@@ -4,7 +4,7 @@ float getRand01() {
 	return ((double)rand()) / RAND_MAX;
 }
 
-void createObjects(VulkanEngine& engine) {
+void createObjects(VulkanEngine& engine){
 	int n = 400;
 	for (int i = 0; i < n; i++) {
 		RenderObject monkey;
@@ -21,8 +21,7 @@ void createObjects(VulkanEngine& engine) {
 	}
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]){
 	VulkanEngine engine;
 
 	engine.get_mesh("../../assets/monkey_flat.obj", "monkey");

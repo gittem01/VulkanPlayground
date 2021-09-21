@@ -22,32 +22,30 @@ public:
 	glm::vec3 rot;
 	glm::vec3 rotAim;
 
-	float zoom = 1;
-	float zoomAim = 0.0f;
+	float zoom;
+	float zoomAim;
 
-	float posSmth = 0.1f;
-	float rotSmth = 0.1f;
-	float zoomSmth = 0.1f;
+	float keyPosSmth = 10.0f;
+	float wheelPosSmth = 5.0f;
+	float rotSmth = 5.0f;
+	float zoomSmth = 5.0f;
 
 	SDL_Window* window;
 
-	float freeSpeed = 0.1f;
+	float freeSpeed = 5.0f;
 	float speedMult = BASE_MULT;
 
 	int w, h;
 	WindowHandler* wp;
 
-	glm::vec2 zoomLimits = glm::vec2(0.5, 3);
+	glm::vec2 zoomLimits = glm::vec2(15.0f, 90.0f);
 
 	glm::mat4 pers;
 	glm::mat4 view;
 
 	glm::vec3 lookDir = glm::vec3(0, 0, -1);
 	glm::vec3 topVec = glm::vec3(0, 1, 0);
-	glm::vec3 rightVec;
-
-	float dist = 3.0f;
-	float distLimits[2] = { 1.0f, 50.0f };
+	glm::vec3 rightVec = glm::vec3(1, 0, 0);;
 
 	CameraTypes cameraType = SURROUNDER;
 

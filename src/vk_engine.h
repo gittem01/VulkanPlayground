@@ -22,7 +22,7 @@
 #include <unordered_map>
 #include <math.h>
 
-constexpr unsigned int FRAME_OVERLAP = 2;
+constexpr unsigned int FRAME_OVERLAP = 3;
 
 struct UploadContext {
 	VkFence _uploadFence;

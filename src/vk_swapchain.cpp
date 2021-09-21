@@ -289,13 +289,15 @@ VkSurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfac
 }
 
 VkPresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+    // masking is fine since fifo relaxed is not gonna be used
+    uint32_t mask = 0;
     for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) {
-            return availablePresentMode;
-        }
+        mask |= availablePresentMode;
     }
 
-    return VK_PRESENT_MODE_IMMEDIATE_KHR;
+    if (mask & VK_PRESENT_MODE_FIFO_KHR) return VK_PRESENT_MODE_FIFO_KHR;
+    else if (mask & VK_PRESENT_MODE_MAILBOX_KHR) return VK_PRESENT_MODE_MAILBOX_KHR;
+    else return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
 VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {

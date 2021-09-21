@@ -6,6 +6,7 @@ set (CMAKE_CXX_STANDARD 17)
 if (UNIX)
 	set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/debug)
 endif (UNIX)
+
 add_subdirectory ("third_party/SDL")
 include_directories("third_party/SDL/include")
 
@@ -23,23 +24,23 @@ add_subdirectory("third_party/VulkanMemoryAllocator")
 
 link_directories("third_party/vulkan/lib")
 
-add_executable	(VulkanPlayground "src/main.cpp"
-								"src/vk_engine.cpp" "src/vk_engine.h"
-								"src/vk_initializers.cpp" "src/vk_initializers.h"
-								"src/vk_mesh.h" "src/vk_mesh.cpp"
-								"src/vk_types.h"
-								"src/vk_shader.h" "src/vk_shader.cpp"
-								"src/Camera3D.h" "src/Camera3D.cpp"
-								"src/WindowHandler.h" "src/WindowHandler.cpp"
-								"src/vk_swapchain.h" "src/vk_swapchain.cpp"
-								"src/vk_pipelinebuilder.h"
-								"src/vk_utils.h" "src/vk_utils.cpp")
+									# CPP						# H
+add_executable	(VulkanPlayground	"src/main.cpp"
+									"src/vk_types.h"
+									"src/vk_pipelinebuilder.h"
+									"src/vk_engine.cpp"			"src/vk_engine.h"
+									"src/vk_initializers.cpp"	"src/vk_initializers.h"
+									"src/vk_mesh.h"				"src/vk_mesh.cpp"
+									"src/vk_shader.h"			"src/vk_shader.cpp"
+									"src/Camera3D.h"			"src/Camera3D.cpp"
+									"src/WindowHandler.h"		"src/WindowHandler.cpp"
+									"src/vk_swapchain.h"		"src/vk_swapchain.cpp"
+									"src/vk_utils.h"			"src/vk_utils.cpp")
 
 target_link_libraries(VulkanPlayground SDL2main)
 target_link_libraries(VulkanPlayground SDL2-static)
 target_link_libraries(VulkanPlayground VulkanMemoryAllocator)
 target_link_libraries(VulkanPlayground vk-bootstrap)
-
 
 if (UNIX)
 	target_link_libraries(VulkanPlayground vulkanUnx)
