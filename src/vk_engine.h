@@ -180,7 +180,6 @@ private:
 	void init_descriptors();
 	void init_pipelines();
 	void update_image_descriptors(Texture* tex);
-	void init_scene();
 
 	void upload_mesh(Mesh& mesh);
 	void submitWork(VkCommandBuffer cmdBuffer, VkQueue queue);

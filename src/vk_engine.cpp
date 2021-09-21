@@ -833,11 +833,6 @@ void VulkanEngine::update_image_descriptors(Texture* tex) {
 	vkUpdateDescriptorSets(_device, 1, &texture, 0, NULL);
 }
 
-void VulkanEngine::init_scene() // temporary
-{
-	
-}
-
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
 	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
