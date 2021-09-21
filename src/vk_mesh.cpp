@@ -104,5 +104,7 @@ bool Mesh::load_from_obj(std::string& fileName)
 		}
 	}
 
+	std::cout << "Mesh file: " << fileName << " loaded successfully " << std::endl;
+
 	return true;
 }
