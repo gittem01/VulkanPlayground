@@ -24,7 +24,7 @@ void SwapChain::create(){
     swapchainImageFormat = surfaceFormat.format;
 
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    extent = chooseSwapExtent(swapChainSupport.capabilities);
+    vulkanEngine->wHandler->winExtent = chooseSwapExtent(swapChainSupport.capabilities);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -35,7 +35,7 @@ void SwapChain::create(){
     swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapChainCreateInfo.surface = vulkanEngine->_surface;
     swapChainCreateInfo.minImageCount = imageCount;
-    swapChainCreateInfo.imageExtent = extent;
+    swapChainCreateInfo.imageExtent = vulkanEngine->wHandler->winExtent;
     
     swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -61,9 +61,7 @@ void SwapChain::createHeadless() {
 
     swapchainImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
-    extent = vulkanEngine->_windowExtent;
-
-    VkExtent3D headlessImageExtent = { extent.width, extent.height, 1 };
+    VkExtent3D headlessImageExtent = { vulkanEngine->wHandler->winExtent.width, vulkanEngine->wHandler->winExtent.height, 1 };
 
     VkImageCreateInfo hsimg_info = vkinit::image_create_info(swapchainImageFormat,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, headlessImageExtent, VK_SAMPLE_COUNT_1_BIT);
@@ -91,9 +89,8 @@ void SwapChain::creationLoop() {
 
     for (;;) {
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
-        extent = chooseSwapExtent(swapChainSupport.capabilities);
-        int w = extent.width; int h = extent.height;
-        if (w > 0 && h > 0) {
+        VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+        if (extent.width > 0 && extent.height > 0) {
             create();
             return;
         }
@@ -165,8 +162,8 @@ void SwapChain::createColorResources() {
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     VkExtent3D colorImageExtent = {
-        extent.width,
-        extent.height,
+        vulkanEngine->wHandler->winExtent.width,
+        vulkanEngine->wHandler->winExtent.height,
         1
     };
 
@@ -194,8 +191,8 @@ void SwapChain::createDepthResources(){
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
 	VkExtent3D depthImageExtent = {
-		extent.width,
-		extent.height,
+        vulkanEngine->wHandler->winExtent.width,
+        vulkanEngine->wHandler->winExtent.height,
 		1
 	};
 
@@ -224,8 +221,8 @@ void SwapChain::createFrameBuffers(){
 	fb_info.pNext = NULL;
 
 	fb_info.renderPass = vulkanEngine->_renderPass;
-	fb_info.width = extent.width;
-	fb_info.height = extent.height;
+	fb_info.width = vulkanEngine->wHandler->winExtent.width;
+	fb_info.height = vulkanEngine->wHandler->winExtent.height;
 	fb_info.layers = 1;
 
     uint32_t swapchain_imagecount;

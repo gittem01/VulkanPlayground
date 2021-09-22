@@ -29,8 +29,11 @@ bool VulkanEngine::looper()
 	else if (_isHeadless) wHandler->timeUpdate();
 
 	camera->update();
-
-	ImDrawData* draw_data = imguiLoop();
+	
+	ImDrawData* draw_data;
+	
+	if (!_isHeadless) draw_data = imguiLoop();
+	else draw_data = NULL;
 
 	render(draw_data);
 
@@ -51,23 +54,21 @@ ImDrawData* VulkanEngine::imguiLoop() {
 
 void VulkanEngine::init()
 {
-	wHandler = new WindowHandler(_windowExtent.width, _windowExtent.height);
+	wHandler = new WindowHandler(1300, 700);
 
 	if (!_isHeadless) {
 		wHandler->init();
-		camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
 		_window = wHandler->window;
 	}
-	else {
-		camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), NULL);
-		_window = NULL;
-	}
+	else _window = NULL;
 	
+	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
+
 	init_vulkan();
 
 	setSamples();
 
-	this->_swapChain = new SwapChain((void*)this);
+	_swapChain = new SwapChain((void*)this);
 
 	init_default_renderpass();
 
@@ -81,7 +82,7 @@ void VulkanEngine::init()
 	
 	init_pipelines();
 
-	init_imgui();
+	if (!_isHeadless) init_imgui();
 
 	_isInitialized = true;
 }
@@ -237,7 +238,7 @@ void VulkanEngine::render(ImDrawData* draw_data)
 	rpInfo.renderPass = _renderPass;
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
-	rpInfo.renderArea.extent = _swapChain->extent;
+	rpInfo.renderArea.extent = wHandler->winExtent;
 
 	if (!_isHeadless)
 		rpInfo.framebuffer = _swapChain->framebuffers[lastSwapchainImageIndex];
@@ -252,7 +253,7 @@ void VulkanEngine::render(ImDrawData* draw_data)
 
 	draw_objects(cmd, _renderables.data(), _renderables.size());
 
-	ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
+	if (draw_data) ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
 	vkCmdEndRenderPass(cmd);
 
@@ -724,13 +725,13 @@ void VulkanEngine::init_pipelines() {
 	// build viewport and scissor from the swapchain extents
 	pipelineBuilder._viewport.x = 0.0f;
 	pipelineBuilder._viewport.y = 0.0f;
-	pipelineBuilder._viewport.width = (float)_swapChain->extent.width;
-	pipelineBuilder._viewport.height = (float)_swapChain->extent.height;
+	pipelineBuilder._viewport.width = (float)wHandler->winExtent.width;
+	pipelineBuilder._viewport.height = (float)wHandler->winExtent.height;
 	pipelineBuilder._viewport.minDepth = 0.0f;
 	pipelineBuilder._viewport.maxDepth = 1.0f;
 
 	pipelineBuilder._scissor.offset = { 0, 0 };
-	pipelineBuilder._scissor.extent = _swapChain->extent;
+	pipelineBuilder._scissor.extent = wHandler->winExtent;
 
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 	
@@ -924,13 +925,14 @@ uint32_t VulkanEngine::getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFla
 
 void VulkanEngine::getImageData() {
 	char* imageData = 0;
+
 	// Create the linear tiled destination image to copy to and to read the memory from
 	VkImageCreateInfo imgCreateInfo = {};
 	imgCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 	imgCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-	imgCreateInfo.extent.width = _swapChain->extent.width;
-	imgCreateInfo.extent.height = _swapChain->extent.height;
+	imgCreateInfo.extent.width = wHandler->winExtent.width;
+	imgCreateInfo.extent.height = wHandler->winExtent.height;
 	imgCreateInfo.extent.depth = 1;
 	imgCreateInfo.arrayLayers = 1;
 	imgCreateInfo.mipLevels = 1;
@@ -938,10 +940,10 @@ void VulkanEngine::getImageData() {
 	imgCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imgCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
 	imgCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	// Create the image
+
 	VkImage dstImage;
 	vkCreateImage(_device, &imgCreateInfo, NULL, &dstImage);
-	// Create memory to back up the image
+	
 	VkMemoryRequirements memRequirements;
 	VkMemoryAllocateInfo memAllocInfo = {};
 	memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -981,8 +983,8 @@ void VulkanEngine::getImageData() {
 	imageCopyRegion.srcSubresource.layerCount = 1;
 	imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	imageCopyRegion.dstSubresource.layerCount = 1;
-	imageCopyRegion.extent.width = _swapChain->extent.width;
-	imageCopyRegion.extent.height = _swapChain->extent.height;
+	imageCopyRegion.extent.width = wHandler->winExtent.width;
+	imageCopyRegion.extent.height = wHandler->winExtent.height;
 	imageCopyRegion.extent.depth = 1;
 	
 	vkCmdCopyImage(
@@ -1019,14 +1021,48 @@ void VulkanEngine::getImageData() {
 	
 	vkMapMemory(_device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imageData);
 	imageData += subResourceLayout.offset;
-	
+
+	// save image to a ppm file
+	/*char buffer[5];
+	itoa(wHandler->frameNumber, buffer, 10);
+	std::string imageName = std::string("headlessImage") + std::string(buffer) + std::string(".ppm");
+	saveImage(imageData, imageName, wHandler->winExtent, subResourceLayout);
+	*/
+
 	printf("Frame: %d\n", wHandler->frameNumber);
 
-	// Clean up resources
 	vkUnmapMemory(_device, dstImageMemory);
 	vkFreeMemory(_device, dstImageMemory, nullptr);
 	vkDestroyImage(_device, dstImage, nullptr);
 	vkFreeCommandBuffers(_device, _frames[wHandler->frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
+}
+
+void VulkanEngine::saveImage(char* imageData, std::string imageName, VkExtent2D imageExtent, VkSubresourceLayout subResourceLayout) {
+	std::ofstream file(imageName, std::ios::out | std::ios::binary);
+
+	// ppm header
+	file << "P6\n" << wHandler->winExtent.width << "\n" << wHandler->winExtent.height << "\n" << 255 << "\n";
+
+	std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM };
+	const bool colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), VK_FORMAT_R8G8B8A8_UNORM) != formatsBGR.end());
+
+	// ppm binary pixel data
+	for (int32_t y = 0; y < imageExtent.height; y++) {
+		unsigned int* row = (unsigned int*)imageData;
+		for (int32_t x = 0; x < imageExtent.width; x++) {
+			if (colorSwizzle) {
+				file.write((char*)row + 2, 1);
+				file.write((char*)row + 1, 1);
+				file.write((char*)row, 1);
+			}
+			else {
+				file.write((char*)row, 3);
+			}
+			row++;
+		}
+		imageData += subResourceLayout.rowPitch;
+	}
+	file.close();
 }
 
 void VulkanEngine::init_imgui() {

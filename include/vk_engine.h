@@ -133,8 +133,6 @@ public:
 
 	UploadContext _uploadContext;
 
-	VkExtent2D _windowExtent = { 1300 , 700 };
-
 	struct SDL_Window* _window{ NULL };
 
 	WindowHandler* wHandler;
@@ -188,4 +186,5 @@ private:
 	void submitWork(VkCommandBuffer cmdBuffer, VkQueue queue);
 	uint32_t getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
 	void getImageData();
+	void saveImage(char* imageData, std::string imageName, VkExtent2D imageExtent, VkSubresourceLayout subResourceLayout);
 };

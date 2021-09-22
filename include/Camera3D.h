@@ -35,7 +35,6 @@ public:
 	float freeSpeed = 5.0f;
 	float speedMult = BASE_MULT;
 
-	int w, h;
 	WindowHandler* wp;
 
 	glm::vec2 zoomLimits = glm::vec2(15.0f, 90.0f);
@@ -52,7 +51,7 @@ public:
 	Camera3D(glm::vec3 pos, WindowHandler* wp);
 	void update();
 
-	glm::mat4 getPers(int width, int height);
+	glm::mat4 getPers();
 	glm::mat4 getView(bool posIncl);
 	void changeZoom(float inc);
 	float limitZoom(float inZoom);

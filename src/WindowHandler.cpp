@@ -11,6 +11,7 @@ WindowHandler::WindowHandler(int w, int h) {
     this->msCounter = 0;
     this->titleTime = UINT32_MAX;
     this->winExtent.width = w; this->winExtent.height = h;
+    this->window = NULL;
 }
 
 void WindowHandler::init() {
@@ -44,7 +45,12 @@ void WindowHandler::clearKeyData() {
     }
 }
 
-int WindowHandler::looper() { 
+int WindowHandler::looper() {
+    if (window) {
+        int w, h;
+        SDL_GetWindowSize(window, &w, &h);
+        winExtent.width = w; winExtent.height = h;
+    }
     clearMouseData();
     clearKeyData();
 
@@ -91,9 +97,11 @@ void WindowHandler::handleTime(){
 
 int WindowHandler::eventHandler() {
     SDL_Event cEvent; // current event
+    ImGuiIO imIO = ImGui::GetIO();
+    
     while (SDL_PollEvent(&cEvent)) {
         ImGui_ImplSDL2_ProcessEvent(&cEvent);
-
+        
         switch (cEvent.type)
         {
         case SDL_QUIT:

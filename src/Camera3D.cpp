@@ -11,21 +11,17 @@ Camera3D::Camera3D(glm::vec3 pos, WindowHandler* wp) {
 	this->zoomAim = 0.0f;
 
 	this->wp = wp;
-	if (wp) this->window = wp->window;
-	else this->window = NULL;
+	this->window = wp->window;
 
 	this->rightVec = glm::normalize(glm::cross(topVec, lookDir));
 
-	int width, height;
-	SDL_GetWindowSize(this->window, &width, &height);
-	this->pers = this->getPers(width, height);
-	this->w = width; this->h = height;
+	this->pers = this->getPers();
 }
 
 
-glm::mat4 Camera3D::getPers(int width, int height)
+glm::mat4 Camera3D::getPers()
 {
-	return glm::perspective(glm::radians(zoom), (float)width / (float)height, 0.001f, 500.0f);
+	return glm::perspective(glm::radians(zoom), (float)wp->winExtent.width / (float)wp->winExtent.height, 0.001f, 500.0f);
 }
 
 glm::mat4 Camera3D::getView(bool posIncl)
@@ -81,7 +77,6 @@ void Camera3D::update()
 	if (wp) {
 		int width, height;
 		SDL_GetWindowSize(this->window, &width, &height);
-		this->w = width; this->h = height;
 
 		updatePos();
 
@@ -92,7 +87,7 @@ void Camera3D::update()
 
 	rightVec = glm::normalize(glm::cross(topVec, lookDir));
 	
-	pers = getPers(w, h);
+	pers = getPers();
 	view = getView(true);
 
 	pers[1][1] *= -1;

@@ -14,7 +14,6 @@ class SwapChain {
 public:
     SwapChain(void* engine);
 
-    VkExtent2D extent;
     VkSwapchainKHR swapChain;
     VkFormat swapchainImageFormat;
 	std::vector<VkImage> swapchainImages;
