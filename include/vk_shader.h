@@ -6,7 +6,7 @@
 
 class VulkanShader {
 public:
-	VulkanShader(VkDevice device, std::string fileNames[], size_t count);
+	VulkanShader(VkDevice device, std::vector<std::string> fileNames);
 	~VulkanShader();
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 	std::vector<VkShaderModule> shaderModules;

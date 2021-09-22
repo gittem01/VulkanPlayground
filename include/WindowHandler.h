@@ -9,6 +9,10 @@
 #include <iostream>
 #include <string>
 
+#include "imgui.h"
+#include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_vulkan.h"
+
 #define MOUSEMAX 6
 #define KEYMAX 512
 #define REFRESH_INTERVAL 400 // 0.4 sec

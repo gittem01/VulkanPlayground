@@ -4,7 +4,7 @@
 #include "vk_engine.h"
 #include <string>
 
-#define ENABLE_VALIDATION 0
+#define ENABLE_VALIDATION 1
 
 #define VK_CHECK(x){												\
 	VkResult err = x;												\
@@ -30,13 +30,23 @@ bool VulkanEngine::looper()
 
 	camera->update();
 
-	render();
+	ImDrawData* draw_data = imguiLoop();
 
-	if (_isHeadless) {
-		camera->pos.z -= 0.5f;
-	}
+	render(draw_data);
 
 	return false;
+}
+
+ImDrawData* VulkanEngine::imguiLoop() {
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL2_NewFrame(_window);
+	ImGui::NewFrame();
+
+	ImGui::ShowDemoWindow();
+
+	ImGui::Render();
+
+	return ImGui::GetDrawData();
 }
 
 void VulkanEngine::init()
@@ -70,6 +80,8 @@ void VulkanEngine::init()
 	init_descriptors();
 	
 	init_pipelines();
+
+	init_imgui();
 
 	_isInitialized = true;
 }
@@ -136,6 +148,7 @@ void VulkanEngine::cleanup(){
 			vmaDestroyBuffer(_allocator, _frames[i].objectBuffer._buffer , _frames[i].objectBuffer._allocation);
 		}
 
+		vkDestroyDescriptorPool(_device, _imguiPool, NULL);
 		vkDestroyDescriptorPool(_device, _descriptorPool, NULL);
 		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, NULL);
 		vkDestroyDescriptorSetLayout(_device, _objectSetLayout, NULL);
@@ -152,6 +165,10 @@ void VulkanEngine::cleanup(){
 		}
 
 		_swapChain->destroy();
+
+		ImGui_ImplVulkan_Shutdown();
+		ImGui_ImplSDL2_Shutdown();
+		ImGui::DestroyContext();
 
 		vkDestroyRenderPass(_device, _renderPass, NULL);
 
@@ -179,7 +196,7 @@ void VulkanEngine::cleanup(){
 FrameData& VulkanEngine::get_current_frame() { return _frames[wHandler->frameNumber % FRAME_OVERLAP]; }
 
 
-void VulkanEngine::render()
+void VulkanEngine::render(ImDrawData* draw_data)
 {
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, UINT64_MAX));
 
@@ -234,6 +251,8 @@ void VulkanEngine::render()
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	draw_objects(cmd, _renderables.data(), _renderables.size());
+
+	ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
 	vkCmdEndRenderPass(cmd);
 
@@ -318,7 +337,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	}
 
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
-
+	
 	std::string lastMesh = std::string();
 	std::string lastMaterial = std::string();
 	for (int i = 0; i < count; i++)
@@ -682,21 +701,23 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
 void VulkanEngine::init_pipelines() {
 	PipelineBuilder pipelineBuilder;
 	
-	std::string fileNames[] = { std::string("../../shaders/default.vert.spv"), 
-								std::string("../../shaders/default.frag.spv") };
+	std::vector<std::string> fileNames =	{	std::string("../../shaders/default.vert.spv"), 
+												std::string("../../shaders/default.frag.spv") 
+											};
 	
-	VulkanShader vulkanShader = VulkanShader(_device, fileNames, 2);
+	VulkanShader vulkanShader = VulkanShader(_device, fileNames);
 	pipelineBuilder._shaderStages = vulkanShader.shaderStages;
 
-	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
-	
 	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
-
-	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
 	
-	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+	VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+	VkPipelineVertexInputStateCreateInfo info;
+	
+	pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+	pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+	
 	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+	pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
 
 	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
@@ -1006,6 +1027,53 @@ void VulkanEngine::getImageData() {
 	vkFreeMemory(_device, dstImageMemory, nullptr);
 	vkDestroyImage(_device, dstImage, nullptr);
 	vkFreeCommandBuffers(_device, _frames[wHandler->frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
+}
+
+void VulkanEngine::init_imgui() {
+	VkDescriptorPoolSize pool_sizes[] =
+	{
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+	};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	pool_info.maxSets = 1000;
+	pool_info.poolSizeCount = std::size(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+
+	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &_imguiPool));
+
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+	
+	ImGui_ImplSDL2_InitForVulkan(_window);
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = _instance;
+	init_info.PhysicalDevice = _chosenGPU;
+	init_info.Device = _device;
+	init_info.Queue = _graphicsQueue;
+	init_info.QueueFamily = _graphicsQueueFamily;
+	init_info.DescriptorPool = _imguiPool;
+	init_info.MinImageCount = _swapChain->swapchainImages.size();
+	init_info.ImageCount = _swapChain->swapchainImages.size();
+	init_info.MSAASamples = samples;
+	ImGui_ImplVulkan_Init(&init_info, _renderPass);
+
+	immediate_submit([&](VkCommandBuffer cmd) {
+		ImGui_ImplVulkan_CreateFontsTexture(cmd);
+	});
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)

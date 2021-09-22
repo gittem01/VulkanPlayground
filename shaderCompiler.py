@@ -9,7 +9,7 @@ if platform == "linux" or platform == "linux2":
     compilerDir = "/usr/bin"
     compilerExe = compilerDir + "/glslc"
 elif platform == "win32":
-    compilerDir = "C:/VulkanSDK/1.2.182.0/Bin"
+    compilerDir = "C:/VulkanSDK/1.2.189.2/Bin"
     compilerExe = compilerDir + "/glslc.exe"
 else:
     exit("only tested for linux and windows")

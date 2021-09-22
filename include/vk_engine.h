@@ -122,6 +122,7 @@ public:
 	VkDescriptorSetLayout _singleTextureSetLayout;
 
 	VkDescriptorPool _descriptorPool;
+	VkDescriptorPool _imguiPool;
 
 	VkDescriptorSet _globalDescriptor;
 
@@ -165,7 +166,8 @@ public:
 	void cleanup();
 
 	// render loop
-	void render();
+	void render(ImDrawData* draw_data);
+	ImDrawData* imguiLoop();
 
 	// main loop
 	bool looper();
@@ -179,6 +181,7 @@ private:
 	void init_sync_structures();
 	void init_descriptors();
 	void init_pipelines();
+	void init_imgui();
 	void update_image_descriptors(Texture* tex);
 
 	void upload_mesh(Mesh& mesh);

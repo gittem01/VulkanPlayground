@@ -17,7 +17,7 @@ void WindowHandler::init() {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GetTicks();
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-
+    
     window = SDL_CreateWindow(
         "",
         SDL_WINDOWPOS_UNDEFINED,
@@ -92,6 +92,8 @@ void WindowHandler::handleTime(){
 int WindowHandler::eventHandler() {
     SDL_Event cEvent; // current event
     while (SDL_PollEvent(&cEvent)) {
+        ImGui_ImplSDL2_ProcessEvent(&cEvent);
+
         switch (cEvent.type)
         {
         case SDL_QUIT:

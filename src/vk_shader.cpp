@@ -1,13 +1,13 @@
 #include "vk_shader.h"
 #include "vk_initializers.h"
 
-VulkanShader::VulkanShader(VkDevice device, std::string fileNames[], size_t count) {
+VulkanShader::VulkanShader(VkDevice device, std::vector<std::string> fileNames) {
 	this->device = device;
-	this->shaderStages.resize(count);
+	this->shaderStages.resize(fileNames.size());
 	
 	VkShaderStageFlagBits bits[3] = { VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT, VK_SHADER_STAGE_GEOMETRY_BIT };
 
-	for (int i = 0; i < count; i++) {
+	for (int i = 0; i < fileNames.size(); i++) {
 		VkShaderModule shaderModule = load_shader_module(device, fileNames[i].c_str());
 		shaderModules.push_back(shaderModule);
 		shaderStages[i] = vkinit::pipeline_shader_stage_create_info(bits[i], shaderModule);
