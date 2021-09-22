@@ -13,51 +13,21 @@
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_vulkan.h"
 
-#define MOUSEMAX 6
-#define KEYMAX 512
-#define REFRESH_INTERVAL 400 // 0.4 sec
-
 class WindowHandler
 {
 public:
-	int* mouseData = (int*)calloc(MOUSEMAX, sizeof(int));
-	int* keyData = (int*)calloc(KEYMAX, sizeof(int));
-
-	int* lastMousePos = (int*)calloc(2, sizeof(int));
-	int* moveDiff = (int*)calloc(2, sizeof(int));
-
-	glm::vec2 lastWinPos, lastWinSize;
-
 	SDL_Window* window;
-
-	uint32_t deltaTimeMs;
-	float deltaTimeSc;
-	uint32_t fps;
-	uint32_t frameNumber;
 	VkExtent2D winExtent;
+
+	ImGuiIO* io;
+
+	uint32_t frameNumber = 0;
 
 	WindowHandler(int w, int h);
 	void init();
 
-	void timeUpdate();
-
 	int looper();
 
 private:
-	uint32_t lastTime;
-	uint32_t totalMs;
-	uint32_t msCounter;
-	uint32_t titleTime;
-
 	int eventHandler();
-	void handleTime();
-	void clearMouseData();
-	void clearKeyData();
-	void imRender(); // TODO
-	void mouseMovementEventCallback(double, double);
-	void mouseButtonEventCallback(int, int);
-	void scrollEventCallback(double, double);
-	void keyEventCallback(int key, int scancode, int action);
-	void windowEventCallBack(SDL_Event wEvent);
-	void windowSizeEventCallback(int, int);
 };

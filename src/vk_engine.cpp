@@ -4,7 +4,7 @@
 #include "vk_engine.h"
 #include <string>
 
-#define ENABLE_VALIDATION 1
+#define ENABLE_VALIDATION 0
 
 #define VK_CHECK(x){												\
 	VkResult err = x;												\
@@ -25,15 +25,18 @@ VulkanEngine::~VulkanEngine() {
 
 bool VulkanEngine::looper()
 {
+	wHandler->frameNumber += 1;
+
 	if (!_isHeadless && !wHandler->looper()) return true;
-	else if (_isHeadless) wHandler->timeUpdate();
+
+	// game update start
 
 	camera->update();
-	
-	ImDrawData* draw_data;
-	
+
+	// game update end
+
+	ImDrawData* draw_data = NULL;
 	if (!_isHeadless) draw_data = imguiLoop();
-	else draw_data = NULL;
 
 	render(draw_data);
 
@@ -41,10 +44,6 @@ bool VulkanEngine::looper()
 }
 
 ImDrawData* VulkanEngine::imguiLoop() {
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL2_NewFrame(_window);
-	ImGui::NewFrame();
-
 	ImGui::ShowDemoWindow();
 
 	ImGui::Render();
@@ -1110,6 +1109,8 @@ void VulkanEngine::init_imgui() {
 		ImGui_ImplVulkan_CreateFontsTexture(cmd);
 	});
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+	wHandler->io = &ImGui::GetIO();
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)
