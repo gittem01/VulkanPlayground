@@ -15,8 +15,8 @@
 	}																\
 }
 
-VulkanEngine::VulkanEngine() {
-	init();
+VulkanEngine::VulkanEngine(uint32_t width, uint32_t height) {
+	init(width, height);
 }
 
 VulkanEngine::~VulkanEngine() {
@@ -25,9 +25,16 @@ VulkanEngine::~VulkanEngine() {
 
 bool VulkanEngine::looper()
 {
-	wHandler->frameNumber += 1;
+	frameNumber += 1;
 
-	if (!_isHeadless && !wHandler->looper()) return true;
+	if (!_isHeadless) {
+		int res = eventHandler();
+		if (!res) return 1;
+
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+	}
 
 	// game update start
 
@@ -51,17 +58,39 @@ ImDrawData* VulkanEngine::imguiLoop() {
 	return ImGui::GetDrawData();
 }
 
-void VulkanEngine::init()
-{
-	wHandler = new WindowHandler(1300, 700);
+int VulkanEngine::eventHandler() {
+	SDL_Event cEvent; // current event
+
+	while (SDL_PollEvent(&cEvent)) {
+		if (cEvent.type == SDL_QUIT) return 0;
+		ImGui_ImplSDL2_ProcessEvent(&cEvent);
+	}
+
+	return 1;
+}
+
+void VulkanEngine::init(uint32_t width, uint32_t height) {
+	winExtent.width = width;
+	winExtent.height = height;
+
+	frameNumber = 0;
 
 	if (!_isHeadless) {
-		wHandler->init();
-		_window = wHandler->window;
+		SDL_Init(SDL_INIT_VIDEO);
+
+		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+
+		window = SDL_CreateWindow(
+			"Window",
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			winExtent.width, winExtent.height,
+			window_flags
+		);
 	}
-	else _window = NULL;
+	else window = NULL;
 	
-	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), wHandler);
+	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), (void*)this);
 
 	init_vulkan();
 
@@ -82,6 +111,7 @@ void VulkanEngine::init()
 	init_pipelines();
 
 	if (!_isHeadless) init_imgui();
+	else io = NULL;
 
 	_isInitialized = true;
 }
@@ -189,11 +219,11 @@ void VulkanEngine::cleanup(){
 		vkDestroyDevice(_device, NULL);
 		vkDestroyInstance(_instance, NULL);
 
-		SDL_DestroyWindow(_window);
+		SDL_DestroyWindow(window);
 	}
 }
 
-FrameData& VulkanEngine::get_current_frame() { return _frames[wHandler->frameNumber % FRAME_OVERLAP]; }
+FrameData& VulkanEngine::get_current_frame() { return _frames[frameNumber % FRAME_OVERLAP]; }
 
 
 void VulkanEngine::render(ImDrawData* draw_data)
@@ -237,12 +267,12 @@ void VulkanEngine::render(ImDrawData* draw_data)
 	rpInfo.renderPass = _renderPass;
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
-	rpInfo.renderArea.extent = wHandler->winExtent;
+	rpInfo.renderArea.extent = winExtent;
 
 	if (!_isHeadless)
 		rpInfo.framebuffer = _swapChain->framebuffers[lastSwapchainImageIndex];
 	else
-		rpInfo.framebuffer = _swapChain->framebuffers[wHandler->frameNumber % FRAME_OVERLAP];
+		rpInfo.framebuffer = _swapChain->framebuffers[frameNumber % FRAME_OVERLAP];
 		
 	rpInfo.clearValueCount = 2;
 	VkClearValue clearValues[] = { clearValue, depthClear };
@@ -308,7 +338,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	uint32_t fullSize = pad_uniform_buffer_size(sizeof(GPUCameraData)) + pad_uniform_buffer_size(sizeof(GPUSceneData));
 	char* data;
 	vmaMapMemory(_allocator, _worldBuffers._allocation, (void**)&data);
-	int frameIndex = wHandler->frameNumber % FRAME_OVERLAP;
+	int frameIndex = frameNumber % FRAME_OVERLAP;
 	data += fullSize * frameIndex;
 	memcpy(data, &camData, sizeof(GPUCameraData));
 	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
@@ -320,7 +350,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	
 	char* sceneData;
 	vmaMapMemory(_allocator, _worldBuffers._allocation , (void**)&sceneData);
-	frameIndex = wHandler->frameNumber % FRAME_OVERLAP;
+	frameIndex = frameNumber % FRAME_OVERLAP;
 	sceneData += 	fullSize * frameIndex + 
 					pad_uniform_buffer_size(sizeof(GPUCameraData));
 	memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
@@ -402,7 +432,7 @@ void VulkanEngine::init_vulkan()
 #endif
 	
 	if (!_isHeadless)
-		SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
+		SDL_Vulkan_CreateSurface(window, _instance, &_surface);
 	else _surface = VK_NULL_HANDLE;
 
 	VkPhysicalDeviceFeatures features = {};
@@ -724,13 +754,13 @@ void VulkanEngine::init_pipelines() {
 	// build viewport and scissor from the swapchain extents
 	pipelineBuilder._viewport.x = 0.0f;
 	pipelineBuilder._viewport.y = 0.0f;
-	pipelineBuilder._viewport.width = (float)wHandler->winExtent.width;
-	pipelineBuilder._viewport.height = (float)wHandler->winExtent.height;
+	pipelineBuilder._viewport.width = (float)winExtent.width;
+	pipelineBuilder._viewport.height = (float)winExtent.height;
 	pipelineBuilder._viewport.minDepth = 0.0f;
 	pipelineBuilder._viewport.maxDepth = 1.0f;
 
 	pipelineBuilder._scissor.offset = { 0, 0 };
-	pipelineBuilder._scissor.extent = wHandler->winExtent;
+	pipelineBuilder._scissor.extent = winExtent;
 
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 	
@@ -930,8 +960,8 @@ void VulkanEngine::getImageData() {
 	imgCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 	imgCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-	imgCreateInfo.extent.width = wHandler->winExtent.width;
-	imgCreateInfo.extent.height = wHandler->winExtent.height;
+	imgCreateInfo.extent.width = winExtent.width;
+	imgCreateInfo.extent.height = winExtent.height;
 	imgCreateInfo.extent.depth = 1;
 	imgCreateInfo.arrayLayers = 1;
 	imgCreateInfo.mipLevels = 1;
@@ -956,7 +986,7 @@ void VulkanEngine::getImageData() {
 	VK_CHECK(vkBindImageMemory(_device, dstImage, dstImageMemory, 0));
 
 	// Do the actual blit from the offscreen image to our host visible destination image
-	VkCommandBufferAllocateInfo cmdBufAllocateInfo = vkinit::command_buffer_allocate_info(_frames[wHandler->frameNumber % FRAME_OVERLAP]._commandPool,
+	VkCommandBufferAllocateInfo cmdBufAllocateInfo = vkinit::command_buffer_allocate_info(_frames[frameNumber % FRAME_OVERLAP]._commandPool,
 		1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	VkCommandBuffer copyCmd;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdBufAllocateInfo, &copyCmd));
@@ -982,13 +1012,13 @@ void VulkanEngine::getImageData() {
 	imageCopyRegion.srcSubresource.layerCount = 1;
 	imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	imageCopyRegion.dstSubresource.layerCount = 1;
-	imageCopyRegion.extent.width = wHandler->winExtent.width;
-	imageCopyRegion.extent.height = wHandler->winExtent.height;
+	imageCopyRegion.extent.width = winExtent.width;
+	imageCopyRegion.extent.height = winExtent.height;
 	imageCopyRegion.extent.depth = 1;
 	
 	vkCmdCopyImage(
 		copyCmd,
-		_swapChain->headlessImages[wHandler->frameNumber % FRAME_OVERLAP]._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		_swapChain->headlessImages[frameNumber % FRAME_OVERLAP]._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1,
 		&imageCopyRegion
@@ -1023,24 +1053,24 @@ void VulkanEngine::getImageData() {
 
 	// save image to a ppm file
 	/*char buffer[5];
-	itoa(wHandler->frameNumber, buffer, 10);
+	itoa(frameNumber, buffer, 10);
 	std::string imageName = std::string("headlessImage") + std::string(buffer) + std::string(".ppm");
-	saveImage(imageData, imageName, wHandler->winExtent, subResourceLayout);
+	saveImage(imageData, imageName, winExtent, subResourceLayout);
 	*/
 
-	printf("Frame: %d\n", wHandler->frameNumber);
+	printf("Frame: %d\n", frameNumber);
 
 	vkUnmapMemory(_device, dstImageMemory);
 	vkFreeMemory(_device, dstImageMemory, nullptr);
 	vkDestroyImage(_device, dstImage, nullptr);
-	vkFreeCommandBuffers(_device, _frames[wHandler->frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
+	vkFreeCommandBuffers(_device, _frames[frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
 }
 
 void VulkanEngine::saveImage(char* imageData, std::string imageName, VkExtent2D imageExtent, VkSubresourceLayout subResourceLayout) {
 	std::ofstream file(imageName, std::ios::out | std::ios::binary);
 
 	// ppm header
-	file << "P6\n" << wHandler->winExtent.width << "\n" << wHandler->winExtent.height << "\n" << 255 << "\n";
+	file << "P6\n" << winExtent.width << "\n" << winExtent.height << "\n" << 255 << "\n";
 
 	std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM };
 	const bool colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), VK_FORMAT_R8G8B8A8_UNORM) != formatsBGR.end());
@@ -1092,7 +1122,7 @@ void VulkanEngine::init_imgui() {
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	
-	ImGui_ImplSDL2_InitForVulkan(_window);
+	ImGui_ImplSDL2_InitForVulkan(window);
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	init_info.Instance = _instance;
 	init_info.PhysicalDevice = _chosenGPU;
@@ -1110,7 +1140,8 @@ void VulkanEngine::init_imgui() {
 	});
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
-	wHandler->io = &ImGui::GetIO();
+	io = &ImGui::GetIO();
+	io->IniFilename = "../../imgui.ini";
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)

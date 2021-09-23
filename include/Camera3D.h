@@ -4,7 +4,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <math.h>
-#include "WindowHandler.h"
 
 #define BASE_MULT 0.25f
 
@@ -30,12 +29,10 @@ public:
 	float rotSmth = 5.0f;
 	float zoomSmth = 5.0f;
 
-	SDL_Window* window;
-
 	float freeSpeed = 5.0f;
 	float speedMult = BASE_MULT;
 
-	WindowHandler* wp;
+	void* engine;
 
 	glm::vec2 zoomLimits = glm::vec2(15.0f, 90.0f);
 
@@ -48,7 +45,7 @@ public:
 
 	CameraTypes cameraType = SURROUNDER;
 
-	Camera3D(glm::vec3 pos, WindowHandler* wp);
+	Camera3D(glm::vec3 pos, void* engine);
 	void update();
 
 	glm::mat4 getPers();

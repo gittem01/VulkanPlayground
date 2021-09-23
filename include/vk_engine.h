@@ -13,6 +13,11 @@
 #include "vk_pipelinebuilder.h"
 #include "vk_utils.h"
 #include "stb_image.h"
+#include "SDL.h"
+#include "SDL_vulkan.h"
+#include "imgui.h"
+#include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_vulkan.h"
 
 #include <iostream>
 #include <fstream>
@@ -89,11 +94,18 @@ public:
 	std::unordered_map<std::string, Texture> _loadedTextures;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
-	
-	SwapChain* _swapChain;
 
 	bool _isInitialized = false;
 	bool _isHeadless = false; // still testing...
+
+	SwapChain* _swapChain;
+
+	SDL_Window* window;
+	VkExtent2D winExtent;
+	ImGuiIO* io;
+
+	uint32_t frameNumber;
+
 	uint32_t lastSwapchainImageIndex;
 
 	VkSampleCountFlagBits desiredSamples = VK_SAMPLE_COUNT_4_BIT;
@@ -133,12 +145,9 @@ public:
 
 	UploadContext _uploadContext;
 
-	struct SDL_Window* _window{ NULL };
-
-	WindowHandler* wHandler;
 	Camera3D* camera;
 
-	VulkanEngine();
+	VulkanEngine(uint32_t width, uint32_t height);
 	~VulkanEngine();
 
 	void get_mesh(std::string meshPath, const char* meshName);
@@ -158,7 +167,7 @@ public:
 	void setSamples();
 
 	// initializes everything in the engine
-	void init();
+	void init(uint32_t width, uint32_t height);
 
 	// shuts down the engine
 	void cleanup();
@@ -172,6 +181,7 @@ public:
 
 private:
 	void windowResizeEvent();
+	int eventHandler();
 
 	void init_vulkan();
 	void init_commands();

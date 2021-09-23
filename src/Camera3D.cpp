@@ -1,6 +1,6 @@
-#include "Camera3D.h"
+#include "vk_engine.h"
 
-Camera3D::Camera3D(glm::vec3 pos, WindowHandler* wp) {
+Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 	this->pos = pos;
 	this->posAim = glm::vec3(0, 0, 0);
 
@@ -10,8 +10,7 @@ Camera3D::Camera3D(glm::vec3 pos, WindowHandler* wp) {
 	this->zoom = 45.0f;
 	this->zoomAim = 0.0f;
 
-	this->wp = wp;
-	this->window = wp->window;
+	this->engine = engine;
 
 	this->rightVec = glm::normalize(glm::cross(topVec, lookDir));
 
@@ -21,7 +20,8 @@ Camera3D::Camera3D(glm::vec3 pos, WindowHandler* wp) {
 
 glm::mat4 Camera3D::getPers()
 {
-	return glm::perspective(glm::radians(zoom), (float)wp->winExtent.width / (float)wp->winExtent.height, 0.001f, 500.0f);
+	return glm::perspective(glm::radians(zoom), 
+		(float)((VulkanEngine*) engine)->winExtent.width / (float)((VulkanEngine*) engine)->winExtent.height, 0.001f, 500.0f);
 }
 
 glm::mat4 Camera3D::getView(bool posIncl)
@@ -52,19 +52,20 @@ float Camera3D::limitZoom(float inZoom)
 }
 
 void Camera3D::updateZoom() {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 	if (cameraType == WALKER) {
-		if (wp->io->MouseWheel != 0) {
-			zoomAim -= wp->io->MouseWheel * 2.5f;
+		if (egn->io->MouseWheel != 0) {
+			zoomAim -= egn->io->MouseWheel * 2.5f;
 		}
-		float diff = zoomAim * zoomSmth * wp->io->DeltaTime;
+		float diff = zoomAim * zoomSmth * egn->io->DeltaTime;
 		changeZoom(diff);
 		zoomAim -= diff;
 	}
 	else if (cameraType == SURROUNDER) {
-		if (wp->io->MouseWheel != 0) {			
-			posAim += lookDir * wp->io->MouseWheel * speedMult;
+		if (egn->io->MouseWheel != 0) {			
+			posAim += lookDir * egn->io->MouseWheel * speedMult;
 		}
-		glm::vec3 diff = posAim * wheelPosSmth * wp->io->DeltaTime;
+		glm::vec3 diff = posAim * wheelPosSmth * egn->io->DeltaTime;
 		pos += diff;
 		posAim -= diff;
 	}
@@ -72,11 +73,13 @@ void Camera3D::updateZoom() {
 
 void Camera3D::update()
 {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
 	speedMult = BASE_MULT;
 
-	if (wp->window) {
+	if (egn->window) {
 		int width, height;
-		SDL_GetWindowSize(this->window, &width, &height);
+		SDL_GetWindowSize(egn->window, &width, &height);
 
 		updatePos();
 
@@ -92,7 +95,7 @@ void Camera3D::update()
 
 	pers[1][1] *= -1;
 
-	if (wp->io && wp->io->KeysDownDuration[SDL_SCANCODE_TAB] == 0.0f) {
+	if (egn->io && egn->io->KeysDownDuration[SDL_SCANCODE_TAB] == 0.0f) {
 		if (cameraType == SURROUNDER)
 			cameraType = WALKER;
 		else if (cameraType == WALKER)
@@ -128,18 +131,19 @@ glm::vec3 Camera3D::rotatePointArround(glm::vec3 point, glm::vec3 arroundPoint, 
 }
 
 void Camera3D::updateLookDir() {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 
 	glm::vec3 lookDirection = glm::vec3(0, 0, -1);
 	lookDir = rotatePoint(lookDirection, this->rot);
 	
 	if (cameraType == SURROUNDER) {
-		if (wp->io->MouseDown[2] && wp->io->KeysDown[SDL_SCANCODE_LALT]) {
+		if (egn->io->MouseDown[2] && egn->io->KeysDown[SDL_SCANCODE_LALT]) {
 			glm::vec3 yVec = glm::normalize(glm::cross(lookDir, rightVec));
 
-			posAim += rightVec * (wp->io->MouseDelta.x * 0.01f);
-			posAim += yVec * (wp->io->MouseDelta.y * 0.01f);
+			posAim += rightVec * (egn->io->MouseDelta.x * 0.01f);
+			posAim += yVec * (egn->io->MouseDelta.y * 0.01f);
 		}
-		glm::vec3 diff = posAim * wheelPosSmth * wp->io->DeltaTime;
+		glm::vec3 diff = posAim * wheelPosSmth * egn->io->DeltaTime;
 		pos += diff;
 		posAim -= diff;
 	}
@@ -147,12 +151,14 @@ void Camera3D::updateLookDir() {
 
 void Camera3D::rotateFunc()
 {
-	if (wp->io->MouseDown[2] && (!wp->io->KeysDown[SDL_SCANCODE_LALT] || cameraType == WALKER)) {
-		rotAim.x += wp->io->MouseDelta.y * 0.002f;
-		rotAim.y += wp->io->MouseDelta.x * 0.002f;
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
+	if (egn->io->MouseDown[2] && (!egn->io->KeysDown[SDL_SCANCODE_LALT] || cameraType == WALKER)) {
+		rotAim.x += egn->io->MouseDelta.y * 0.002f;
+		rotAim.y += egn->io->MouseDelta.x * 0.002f;
 	}
 
-	glm::vec3 diff = rotAim * rotSmth * wp->io->DeltaTime;
+	glm::vec3 diff = rotAim * rotSmth * egn->io->DeltaTime;
 	rot += diff;
 	rotAim -= diff;
 	controlRotation(&rot);
@@ -165,10 +171,12 @@ void Camera3D::updatePos()
 }
 
 void Camera3D::keyControl() {
-	if (wp->io->KeysDown[SDL_SCANCODE_LCTRL]) {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
+	if (egn->io->KeysDown[SDL_SCANCODE_LCTRL]) {
 		speedMult *= 5.0f;
 	}
-	if (wp->io->KeysDown[SDL_SCANCODE_LSHIFT]) {
+	if (egn->io->KeysDown[SDL_SCANCODE_LSHIFT]) {
 		speedMult *= 0.2f;
 	}
 
@@ -177,43 +185,44 @@ void Camera3D::keyControl() {
 	}
 }
 
-void Camera3D::updateWlkrPos()
-{	
+void Camera3D::updateWlkrPos() {	
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
 	glm::vec3 speedAddition = glm::vec3(0, 0, 0);
 
-	if (wp->io->KeysDown[SDL_SCANCODE_W]) {
+	if (egn->io->KeysDown[SDL_SCANCODE_W]) {
 		speedAddition.x += freeSpeed * lookDir.x;
 		speedAddition.y += freeSpeed * lookDir.y;
 		speedAddition.z += freeSpeed * lookDir.z;
 	}
 
-	if (wp->io->KeysDown[SDL_SCANCODE_S]) {
+	if (egn->io->KeysDown[SDL_SCANCODE_S]) {
 		speedAddition.x -= freeSpeed * lookDir.x;
 		speedAddition.y -= freeSpeed * lookDir.y;
 		speedAddition.z -= freeSpeed * lookDir.z;
 	}
 
-	if (wp->io->KeysDown[SDL_SCANCODE_A]) {
+	if (egn->io->KeysDown[SDL_SCANCODE_A]) {
 		speedAddition.x += freeSpeed * rightVec.x;
 		speedAddition.y += freeSpeed * rightVec.y;
 		speedAddition.z += freeSpeed * rightVec.z;
 	}
 
-	if (wp->io->KeysDown[SDL_SCANCODE_D]) {
+	if (egn->io->KeysDown[SDL_SCANCODE_D]) {
 		speedAddition.x -= freeSpeed * rightVec.x;
 		speedAddition.y -= freeSpeed * rightVec.y;
 		speedAddition.z -= freeSpeed * rightVec.z;
 	}
 
-	if (wp->io->KeysDown[SDL_SCANCODE_Q]) {
+	if (egn->io->KeysDown[SDL_SCANCODE_Q]) {
 		speedAddition.y += freeSpeed;
 	}
-	if (wp->io->KeysDown[SDL_SCANCODE_E]) {
+	if (egn->io->KeysDown[SDL_SCANCODE_E]) {
 		speedAddition.y -= freeSpeed;
 	}
 
-	posAim += speedAddition * speedMult * wp->io->DeltaTime;
-	glm::vec3 diff = posAim * keyPosSmth * wp->io->DeltaTime;
+	posAim += speedAddition * speedMult * egn->io->DeltaTime;
+	glm::vec3 diff = posAim * keyPosSmth * egn->io->DeltaTime;
 	pos += diff;
 	posAim -= diff;
 }

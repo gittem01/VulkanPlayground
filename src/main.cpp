@@ -22,7 +22,7 @@ void createObjects(VulkanEngine& engine){
 }
 
 int main(int argc, char* argv[]){
-	VulkanEngine engine;
+	VulkanEngine engine(1300, 700);
 
 	engine.get_mesh("../../assets/monkey_flat.obj", "monkey");
 	engine.get_image("../../assets/monkey.png", "monkey");
