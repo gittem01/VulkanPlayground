@@ -133,11 +133,11 @@ void Camera3D::updateLookDir() {
 	lookDir = rotatePoint(lookDirection, this->rot);
 	
 	if (cameraType == SURROUNDER) {
-		if (wp->io->MouseDown[2] && wp->io->KeysDown[SDL_SCANCODE_LSHIFT]) {
+		if (wp->io->MouseDown[2] && wp->io->KeysDown[SDL_SCANCODE_LALT]) {
 			glm::vec3 yVec = glm::normalize(glm::cross(lookDir, rightVec));
 
-			posAim += rightVec * (wp->io->MouseDelta.y * 0.01f);
-			posAim += yVec * (wp->io->MouseDelta.x * 0.01f);
+			posAim += rightVec * (wp->io->MouseDelta.x * 0.01f);
+			posAim += yVec * (wp->io->MouseDelta.y * 0.01f);
 		}
 		glm::vec3 diff = posAim * wheelPosSmth * wp->io->DeltaTime;
 		pos += diff;
@@ -147,7 +147,7 @@ void Camera3D::updateLookDir() {
 
 void Camera3D::rotateFunc()
 {
-	if (wp->io->MouseDown[2] && (!wp->io->KeysDown[SDL_SCANCODE_LSHIFT] || cameraType == WALKER)) {
+	if (wp->io->MouseDown[2] && (!wp->io->KeysDown[SDL_SCANCODE_LALT] || cameraType == WALKER)) {
 		rotAim.x += wp->io->MouseDelta.y * 0.002f;
 		rotAim.y += wp->io->MouseDelta.x * 0.002f;
 	}
