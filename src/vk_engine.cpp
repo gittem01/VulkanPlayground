@@ -51,13 +51,13 @@ bool VulkanEngine::looper()
 }
 
 ImDrawData* VulkanEngine::imguiLoop() {
-	ImGui::Begin("sample", NULL, 0);
+	ImGui::Begin("Imgui window", NULL, 0);
 
 	ImGui::Checkbox("camera keyboard movement smoothness", &camera->enableKeyPosSmth);
 	ImGui::Checkbox("camera rotation smoothness", &camera->enableRotSmth);
 	ImGui::Checkbox("camera wheel movement smoothness", &camera->enableWheelPosSmth);
 	ImGui::Checkbox("camera zoom smoothness", &camera->enableZoomSmth);
-
+	
 	ImGui::PushItemWidth(200);
 	for (int i = 0; i < NUM_VALUES; i++) {
 		char id[2]; itoa(i, id, 10);
@@ -1138,8 +1138,8 @@ void VulkanEngine::init_imgui() {
 	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &_imguiPool));
 
 	ImGui::CreateContext();
-	ImGui::StyleColorsDark();
-	
+	ImGui::StyleColorsDark();	
+
 	ImGui_ImplSDL2_InitForVulkan(window);
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	init_info.Instance = _instance;
@@ -1157,9 +1157,12 @@ void VulkanEngine::init_imgui() {
 		ImGui_ImplVulkan_CreateFontsTexture(cmd);
 	});
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
-
+	
 	io = &ImGui::GetIO();
+	ImGuiStyle* style = &ImGui::GetStyle();
+	
 	io->IniFilename = "../../imgui.ini";
+	style->Colors[ImGuiCol_WindowBg] = ImVec4(0, 0, 0, 0.95);
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)
