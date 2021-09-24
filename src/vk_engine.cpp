@@ -51,7 +51,25 @@ bool VulkanEngine::looper()
 }
 
 ImDrawData* VulkanEngine::imguiLoop() {
-	ImGui::ShowDemoWindow();
+	ImGui::Begin("sample", NULL, 0);
+
+	ImGui::Checkbox("camera keyboard movement smoothness", &camera->enableKeyPosSmth);
+	ImGui::Checkbox("camera rotation smoothness", &camera->enableRotSmth);
+	ImGui::Checkbox("camera wheel movement smoothness", &camera->enableWheelPosSmth);
+	ImGui::Checkbox("camera zoom smoothness", &camera->enableZoomSmth);
+
+	ImGui::PushItemWidth(200);
+	for (int i = 0; i < NUM_VALUES; i++) {
+		char id[2]; itoa(i, id, 10);
+		std::string buttonId = "RESET##" + std::string(id);
+		if (ImGui::Button(buttonId.c_str())) {
+			*camera->values[i] = *camera->baseValues[i];
+		}
+		ImGui::SameLine();
+		ImGui::SliderFloat(camera->strings[i], camera->values[i], 1.0f, 100.0f, "%.1f", 0.1f);
+	}
+
+	ImGui::End();
 
 	ImGui::Render();
 

@@ -15,6 +15,21 @@ Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 	this->rightVec = glm::normalize(glm::cross(topVec, lookDir));
 
 	this->pers = this->getPers();
+
+	strings[0] = "camera keyboard movement speed";
+	strings[1] = "camera rotation speed";
+	strings[2] = "camera wheel movement speed";
+	strings[3] = "camera zoom speed";
+
+	values[0] = &keyPosSpeed;
+	values[1] = &rotSpeed;
+	values[2] = &wheelPosSpeed;
+	values[3] = &zoomSpeed;
+
+	baseValues[0] = &keyPosSpeed_b;
+	baseValues[1] = &rotSpeed_b;
+	baseValues[2] = &wheelPosSpeed_b;
+	baseValues[3] = &zoomSpeed_b;
 }
 
 
@@ -55,17 +70,17 @@ void Camera3D::updateZoom() {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 	if (cameraType == WALKER) {
 		if (egn->io->MouseWheel != 0) {
-			zoomAim -= egn->io->MouseWheel * 2.5f;
+			zoomAim -= egn->io->MouseWheel * zoomSpeed * 0.4;
 		}
-		float diff = zoomAim * zoomSmth * egn->io->DeltaTime;
+		float diff = zoomAim * (zoomSmth * egn->io->DeltaTime * (float)enableZoomSmth + (1-enableZoomSmth));
 		changeZoom(diff);
 		zoomAim -= diff;
 	}
 	else if (cameraType == SURROUNDER) {
 		if (egn->io->MouseWheel != 0) {			
-			posAim += lookDir * egn->io->MouseWheel * speedMult;
+			posAim += lookDir * egn->io->MouseWheel * speedMult * wheelPosSpeed * 0.2f;
 		}
-		glm::vec3 diff = posAim * wheelPosSmth * egn->io->DeltaTime;
+		glm::vec3 diff = posAim * (wheelPosSmth * egn->io->DeltaTime * (float)enableWheelPosSmth + (1 - enableWheelPosSmth));
 		pos += diff;
 		posAim -= diff;
 	}
@@ -143,7 +158,7 @@ void Camera3D::updateLookDir() {
 			posAim += rightVec * (egn->io->MouseDelta.x * 0.01f);
 			posAim += yVec * (egn->io->MouseDelta.y * 0.01f);
 		}
-		glm::vec3 diff = posAim * wheelPosSmth * egn->io->DeltaTime;
+		glm::vec3 diff = posAim * (wheelPosSmth * egn->io->DeltaTime * (float)enableWheelPosSmth + (1 - enableWheelPosSmth));
 		pos += diff;
 		posAim -= diff;
 	}
@@ -154,11 +169,11 @@ void Camera3D::rotateFunc()
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 
 	if (egn->io->MouseDown[2] && (!egn->io->KeysDown[SDL_SCANCODE_LALT] || cameraType == WALKER)) {
-		rotAim.x += egn->io->MouseDelta.y * 0.002f;
-		rotAim.y += egn->io->MouseDelta.x * 0.002f;
+		rotAim.x += egn->io->MouseDelta.y * rotSpeed * 0.0002f;
+		rotAim.y += egn->io->MouseDelta.x * rotSpeed * 0.0002f;
 	}
 
-	glm::vec3 diff = rotAim * rotSmth * egn->io->DeltaTime;
+	glm::vec3 diff = rotAim * (rotSmth * egn->io->DeltaTime * (float)enableRotSmth + (1 - enableRotSmth));
 	rot += diff;
 	rotAim -= diff;
 	controlRotation(&rot);
@@ -191,38 +206,38 @@ void Camera3D::updateWlkrPos() {
 	glm::vec3 speedAddition = glm::vec3(0, 0, 0);
 
 	if (egn->io->KeysDown[SDL_SCANCODE_W]) {
-		speedAddition.x += freeSpeed * lookDir.x;
-		speedAddition.y += freeSpeed * lookDir.y;
-		speedAddition.z += freeSpeed * lookDir.z;
+		speedAddition.x += keyPosSpeed * lookDir.x;
+		speedAddition.y += keyPosSpeed * lookDir.y;
+		speedAddition.z += keyPosSpeed * lookDir.z;
 	}
 
 	if (egn->io->KeysDown[SDL_SCANCODE_S]) {
-		speedAddition.x -= freeSpeed * lookDir.x;
-		speedAddition.y -= freeSpeed * lookDir.y;
-		speedAddition.z -= freeSpeed * lookDir.z;
+		speedAddition.x -= keyPosSpeed * lookDir.x;
+		speedAddition.y -= keyPosSpeed * lookDir.y;
+		speedAddition.z -= keyPosSpeed * lookDir.z;
 	}
 
 	if (egn->io->KeysDown[SDL_SCANCODE_A]) {
-		speedAddition.x += freeSpeed * rightVec.x;
-		speedAddition.y += freeSpeed * rightVec.y;
-		speedAddition.z += freeSpeed * rightVec.z;
+		speedAddition.x += keyPosSpeed * rightVec.x;
+		speedAddition.y += keyPosSpeed * rightVec.y;
+		speedAddition.z += keyPosSpeed * rightVec.z;
 	}
 
 	if (egn->io->KeysDown[SDL_SCANCODE_D]) {
-		speedAddition.x -= freeSpeed * rightVec.x;
-		speedAddition.y -= freeSpeed * rightVec.y;
-		speedAddition.z -= freeSpeed * rightVec.z;
+		speedAddition.x -= keyPosSpeed * rightVec.x;
+		speedAddition.y -= keyPosSpeed * rightVec.y;
+		speedAddition.z -= keyPosSpeed * rightVec.z;
 	}
 
 	if (egn->io->KeysDown[SDL_SCANCODE_Q]) {
-		speedAddition.y += freeSpeed;
+		speedAddition.y += keyPosSpeed;
 	}
 	if (egn->io->KeysDown[SDL_SCANCODE_E]) {
-		speedAddition.y -= freeSpeed;
+		speedAddition.y -= keyPosSpeed;
 	}
 
 	posAim += speedAddition * speedMult * egn->io->DeltaTime;
-	glm::vec3 diff = posAim * keyPosSmth * egn->io->DeltaTime;
+	glm::vec3 diff = posAim * (keyPosSmth * egn->io->DeltaTime * (float)enableKeyPosSmth + (1 - enableKeyPosSmth));
 	pos += diff;
 	posAim -= diff;
 }

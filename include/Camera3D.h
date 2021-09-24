@@ -6,6 +6,7 @@
 #include <math.h>
 
 #define BASE_MULT 0.25f
+#define NUM_VALUES 4
 
 typedef enum CameraTypes {
 	WALKER = 1,
@@ -24,12 +25,31 @@ public:
 	float zoom;
 	float zoomAim;
 
+	float keyPosSpeed = 10.0f;
+	float wheelPosSpeed = 10.0f;
+	float rotSpeed = 10.0f;
+	float zoomSpeed = 10.0f;
+
+	// base speeds
+	float keyPosSpeed_b = 10.0f;
+	float wheelPosSpeed_b = 10.0f;
+	float rotSpeed_b = 10.0f;
+	float zoomSpeed_b = 10.0f;
+
+	char* strings[NUM_VALUES];
+	float* values[NUM_VALUES];
+	float* baseValues[NUM_VALUES];
+
 	float keyPosSmth = 10.0f;
 	float wheelPosSmth = 5.0f;
 	float rotSmth = 5.0f;
 	float zoomSmth = 5.0f;
 
-	float freeSpeed = 5.0f;
+	bool enableKeyPosSmth = true;
+	bool enableWheelPosSmth = true;
+	bool enableRotSmth = true;
+	bool enableZoomSmth = true;
+
 	float speedMult = BASE_MULT;
 
 	void* engine;
