@@ -1165,9 +1165,8 @@ void VulkanEngine::init_imgui() {
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	io = &ImGui::GetIO();
+	
 	ImGuiStyle* style = &ImGui::GetStyle();
-
-	io->IniFilename = "../../imgui.ini";
 	style->Colors[ImGuiCol_WindowBg] = ImVec4(0, 0, 0, 0.95);
 }
 
