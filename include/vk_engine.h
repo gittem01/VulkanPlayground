@@ -51,6 +51,7 @@ struct GPUCameraData {
 	glm::mat4 view;
 	glm::mat4 proj;
 	glm::mat4 viewproj;
+	glm::vec3 cameraPos;
 };
 
 struct Material {

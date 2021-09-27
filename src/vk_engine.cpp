@@ -358,6 +358,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	camData.proj = camera->pers;
 	camData.view = camera->view;
 	camData.viewproj = camera->pers * camera->view;
+	camData.cameraPos = camera->pos;
 
 	uint32_t fullSize = pad_uniform_buffer_size(sizeof(GPUCameraData)) + pad_uniform_buffer_size(sizeof(GPUSceneData));
 	char* data;
