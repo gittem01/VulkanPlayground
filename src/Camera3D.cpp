@@ -16,10 +16,10 @@ Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 
 	this->pers = this->getPers();
 
-	strings[0] = "camera keyboard movement speed";
-	strings[1] = "camera rotation speed";
-	strings[2] = "camera wheel movement speed";
-	strings[3] = "camera zoom speed";
+	strings[0] = (char*)"camera keyboard movement speed";
+	strings[1] = (char*)"camera rotation speed";
+	strings[2] = (char*)"camera wheel movement speed";
+	strings[3] = (char*)"camera zoom speed";
 
 	values[0] = &keyPosSpeed;
 	values[1] = &rotSpeed;
