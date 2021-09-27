@@ -41,38 +41,40 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 
 	vmaCreateImage(vulkanEngine->_allocator, &dimg_info, &dimg_allocinfo, &newImage._image, &newImage._allocation, NULL);
 	
-	vulkanEngine->immediate_submit([&](VkCommandBuffer cmd) {
-		VkImageMemoryBarrier imageBarrier_toTransfer = vkutil::insertImageMemoryBarrier(cmd, newImage._image, 0,
-			VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-		);
+	// one time submit start
+	VkCommandBuffer commandBuffer = vulkanEngine->beginOneTimeSubmit();
+	VkImageMemoryBarrier imageBarrier_toTransfer = vkutil::insertImageMemoryBarrier(commandBuffer, newImage._image, 0,
+		VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+	);
 
-		VkBufferImageCopy copyRegion = {};
-		copyRegion.bufferOffset = 0;
-		copyRegion.bufferRowLength = 0;
-		copyRegion.bufferImageHeight = 0;
+	VkBufferImageCopy copyRegion = {};
+	copyRegion.bufferOffset = 0;
+	copyRegion.bufferRowLength = 0;
+	copyRegion.bufferImageHeight = 0;
 
-		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.imageSubresource.mipLevel = 0;
-		copyRegion.imageSubresource.baseArrayLayer = 0;
-		copyRegion.imageSubresource.layerCount = 1;
-		copyRegion.imageExtent = imageExtent;
+	copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	copyRegion.imageSubresource.mipLevel = 0;
+	copyRegion.imageSubresource.baseArrayLayer = 0;
+	copyRegion.imageSubresource.layerCount = 1;
+	copyRegion.imageExtent = imageExtent;
 
-		vkCmdCopyBufferToImage(cmd, stagingBuffer._buffer, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+	vkCmdCopyBufferToImage(commandBuffer, stagingBuffer._buffer, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-		VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+	VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
 
-		imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-			NULL, 0, NULL, 1, &imageBarrier_toReadable);
-	});
-	
+	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+		NULL, 0, NULL, 1, &imageBarrier_toReadable);
+	vulkanEngine->endOneTimeSubmit(commandBuffer);
+	// one time submit end
+
 	vmaDestroyBuffer(vulkanEngine->_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
 	std::cout << "Texture file: " << fileName << " loaded successfully " << std::endl;

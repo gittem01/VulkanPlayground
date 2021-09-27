@@ -860,13 +860,13 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
 		&mesh._vertexBuffer._buffer, &mesh._vertexBuffer._allocation, NULL)
 	);
 
-	immediate_submit([=](VkCommandBuffer cmd) {
-		VkBufferCopy copy;
-		copy.dstOffset = 0;
-		copy.srcOffset = 0;
-		copy.size = bufferSize;
-		vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
-	});
+	VkCommandBuffer commandBuffer = beginOneTimeSubmit();
+	VkBufferCopy copy;
+	copy.dstOffset = 0;
+	copy.srcOffset = 0;
+	copy.size = bufferSize;
+	vkCmdCopyBuffer(commandBuffer, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
+	endOneTimeSubmit(commandBuffer);
 
 	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }
@@ -908,29 +908,7 @@ void VulkanEngine::update_image_descriptors(Texture* tex) {
 	vkUpdateDescriptorSets(_device, 1, &texture, 0, NULL);
 }
 
-void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
-{
-	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
-    VkCommandBuffer cmd;
-	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &cmd));
-
-	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-
-	function(cmd);
-
-	VK_CHECK(vkEndCommandBuffer(cmd));
-
-	VkSubmitInfo submit = vkinit::submit_info(&cmd);
-	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _uploadContext._uploadFence));
-
-	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, true, UINT64_MAX);
-	vkResetFences(_device, 1, &_uploadContext._uploadFence);
-	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
-}
-
-AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
-{
+AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) {
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.pNext = NULL;
@@ -947,8 +925,29 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 	return newBuffer;
 }
 
-void VulkanEngine::submitWork(VkCommandBuffer cmdBuffer, VkQueue queue)
-{
+VkCommandBuffer& VulkanEngine::beginOneTimeSubmit() {
+	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
+	VkCommandBuffer cmdBuffer;
+	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &cmdBuffer));
+
+	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &cmdBeginInfo));
+
+	return cmdBuffer;
+}
+
+void VulkanEngine::endOneTimeSubmit(VkCommandBuffer cmdBuffer) {
+	VK_CHECK(vkEndCommandBuffer(cmdBuffer));
+
+	VkSubmitInfo submit = vkinit::submit_info(&cmdBuffer);
+	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _uploadContext._uploadFence));
+
+	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, true, UINT64_MAX);
+	vkResetFences(_device, 1, &_uploadContext._uploadFence);
+	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
+}
+
+void VulkanEngine::submitWork(VkCommandBuffer cmdBuffer, VkQueue queue) {
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.commandBufferCount = 1;
@@ -1159,9 +1158,10 @@ void VulkanEngine::init_imgui() {
 	init_info.MSAASamples = samples;
 	ImGui_ImplVulkan_Init(&init_info, _renderPass);
 
-	immediate_submit([&](VkCommandBuffer cmd) {
-		ImGui_ImplVulkan_CreateFontsTexture(cmd);
-	});
+	VkCommandBuffer commandBuffer = beginOneTimeSubmit();
+	ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
+	endOneTimeSubmit(commandBuffer);
+
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	io = &ImGui::GetIO();

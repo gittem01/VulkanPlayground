@@ -163,7 +163,8 @@ public:
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
 	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
-	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+	VkCommandBuffer& beginOneTimeSubmit();
+	void endOneTimeSubmit(VkCommandBuffer cmdBuffer);
 	void setSamples();
 
 	// initializes everything in the engine
