@@ -50,6 +50,8 @@ public:
 	bool enableRotSmth = true;
 	bool enableZoomSmth = true;
 
+	bool isAnyWindowHovered = false;
+
 	float speedMult = BASE_MULT;
 
 	void* engine;

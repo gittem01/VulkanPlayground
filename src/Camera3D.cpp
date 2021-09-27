@@ -68,8 +68,9 @@ float Camera3D::limitZoom(float inZoom)
 
 void Camera3D::updateZoom() {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
 	if (cameraType == WALKER) {
-		if (!ImGui::IsAnyItemHovered() && egn->io->MouseWheel != 0) {
+		if (!isAnyWindowHovered && egn->io->MouseWheel != 0) {
 			zoomAim -= egn->io->MouseWheel * zoomSpeed * 0.4;
 		}
 		float diff = zoomAim * (zoomSmth * egn->io->DeltaTime * (float)enableZoomSmth + (1-enableZoomSmth));
@@ -77,7 +78,7 @@ void Camera3D::updateZoom() {
 		zoomAim -= diff;
 	}
 	else if (cameraType == SURROUNDER) {
-		if (!ImGui::IsAnyItemHovered() && egn->io->MouseWheel != 0) {
+		if (!isAnyWindowHovered && egn->io->MouseWheel != 0) {
 			posAim += lookDir * egn->io->MouseWheel * speedMult * wheelPosSpeed * 0.2f;
 		}
 		glm::vec3 diff = posAim * (wheelPosSmth * egn->io->DeltaTime * (float)enableWheelPosSmth + (1 - enableWheelPosSmth));
@@ -116,6 +117,8 @@ void Camera3D::update()
 		else if (cameraType == WALKER)
 			cameraType = SURROUNDER;
 	}
+
+	isAnyWindowHovered = false;
 }
 
 glm::vec3 Camera3D::rotatePoint(glm::vec3 point, glm::vec3 rotAngles)
@@ -147,6 +150,7 @@ glm::vec3 Camera3D::rotatePointArround(glm::vec3 point, glm::vec3 arroundPoint, 
 
 void Camera3D::updateLookDir() {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
 	glm::vec3 lookDirection = glm::vec3(0, 0, -1);
 	lookDir = rotatePoint(lookDirection, this->rot);
 

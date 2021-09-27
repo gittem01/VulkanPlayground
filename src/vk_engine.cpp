@@ -51,14 +51,20 @@ bool VulkanEngine::looper()
 }
 
 ImDrawData* VulkanEngine::imguiLoop() {
-	ImGui::Begin("Imgui window", NULL, 0);
+	ImGui::SetNextWindowPos(ImVec2(0, 0));
+	ImGui::SetNextWindowSize(ImVec2(450, winExtent.height)); // predefined numbers for now
+	ImGui::Begin("imgui window", NULL, 
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+	camera->isAnyWindowHovered |= ImGui::IsWindowHovered();
+
+	ImGui::Text("FPS: %.1f", io->Framerate);
 
 	ImGui::Checkbox("camera keyboard movement smoothness", &camera->enableKeyPosSmth);
 	ImGui::Checkbox("camera rotation smoothness", &camera->enableRotSmth);
 	ImGui::Checkbox("camera wheel movement smoothness", &camera->enableWheelPosSmth);
 	ImGui::Checkbox("camera zoom smoothness", &camera->enableZoomSmth);
 	
-	ImGui::PushItemWidth(200);
+	ImGui::PushItemWidth(150);
 	for (int i = 0; i < NUM_VALUES; i++) {
 		char id[2]; itoa(i, id, 10);
 		std::string buttonId = "RESET##" + std::string(id);
@@ -68,6 +74,7 @@ ImDrawData* VulkanEngine::imguiLoop() {
 		ImGui::SameLine();
 		ImGui::SliderFloat(camera->strings[i], camera->values[i], 1.0f, 100.0f, "%.1f", 0.1f);
 	}
+	ImGui::PushItemWidth(0); // reset the width of upcoming items to default
 
 	ImGui::End();
 
@@ -237,7 +244,7 @@ void VulkanEngine::cleanup(){
 		vkDestroyDevice(_device, NULL);
 		vkDestroyInstance(_instance, NULL);
 
-		SDL_DestroyWindow(window);
+		//SDL_DestroyWindow(window);
 	}
 }
 
