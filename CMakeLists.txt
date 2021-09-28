@@ -20,11 +20,13 @@ include_directories("third_party/vulkan/include")
 include_directories("third_party/vk-bootstrap/src")
 include_directories("third_party/VulkanMemoryAllocator/include")
 include_directories("third_party/imgui")
+include_directories("third_party/bullet3/src")
 
 include_directories("include")
 
 add_subdirectory("third_party/vk-bootstrap")
 add_subdirectory("third_party/VulkanMemoryAllocator")
+add_subdirectory ("third_party/bullet3")
 
 link_directories("third_party/vulkan/lib")
 
@@ -55,6 +57,7 @@ target_link_libraries(VulkanPlayground SDL2-static)
 target_link_libraries(VulkanPlayground VulkanMemoryAllocator)
 target_link_libraries(VulkanPlayground vk-bootstrap)
 target_link_libraries(VulkanPlayground imgui)
+target_link_libraries(VulkanPlayground ${BULLET_LIBRARIES})
 
 if (UNIX)
 	target_link_libraries(VulkanPlayground vulkanUnx)
