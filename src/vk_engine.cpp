@@ -4,7 +4,7 @@
 #include "vk_engine.h"
 #include <string>
 
-#define ENABLE_VALIDATION 0
+#define ENABLE_VALIDATION 1
 
 #define VK_CHECK(x){												\
 	VkResult err = x;												\
@@ -304,7 +304,7 @@ void VulkanEngine::render(ImDrawData* draw_data)
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	draw_objects(cmd, _renderables.data(), _renderables.size());
+	draw_objects(cmd);
 
 	if (draw_data) ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
@@ -352,7 +352,7 @@ void VulkanEngine::render(ImDrawData* draw_data)
 	}
 }
 
-void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
+void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 {
 	GPUCameraData camData;
 	camData.proj = camera->pers;
@@ -384,26 +384,27 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 	GPUObjectData* objectData;
 	vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, (void**)&objectData);
 
-	for (int i = 0; i < count; i++)
+	for (int i = 0; i < gameObjects.size(); i++)
 	{
-		RenderObject& object = first[i];
-		objectData[i].modelMatrix = object.transformMatrix;
-		objectData[i].objectColor = object.color;
+		// gameObjects.at(i)->reCalculateObjectMatrix(); // static boides does not require this
+		RenderObject* object = gameObjects.at(i)->renderObject;
+		objectData[i].modelMatrix = gameObjects.at(i)->objectMatrix;
+		objectData[i].objectColor = object->color;
 	}
 
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 
 	std::string lastMesh = std::string();
 	std::string lastMaterial = std::string();
-	for (int i = 0; i < count; i++)
+	for (int i = 0; i < gameObjects.size(); i++)
 	{
-		RenderObject& object = first[i];
-		Mesh& mesh = _meshes[object.meshName];
+		RenderObject* object = gameObjects.at(i)->renderObject;
+		Mesh& mesh = _meshes[object->meshName];
 
-		if (object.materialName != lastMaterial) {
-			Material& material = _materials[object.materialName];
+		if (object->materialName != lastMaterial) {
+			Material& material = _materials[object->materialName];
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
-			lastMaterial = object.materialName;
+			lastMaterial = object->materialName;
 
 			uint32_t uniform_offset1 = fullSize * frameIndex;
 			uint32_t uniform_offset2 = uniform_offset1 + pad_uniform_buffer_size(sizeof(GPUCameraData));
@@ -416,13 +417,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject* first, int co
 				1, 1, &get_current_frame().objectDescriptor,			0, NULL);
 
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
-				2, 1, &_loadedTextures[object.textureName].textureSet,	0, NULL);
+				2, 1, &_loadedTextures[object->textureName].textureSet,	0, NULL);
 		}
 
-		if (object.meshName != lastMesh) {
+		if (object->meshName != lastMesh) {
 			VkDeviceSize offset = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &mesh._vertexBuffer._buffer, &offset);
-			lastMesh = object.meshName;
+			lastMesh = object->meshName;
 		}
 		vkCmdDraw(cmd, mesh._vertices.size(), 1, 0, i);
 	}

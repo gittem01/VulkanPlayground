@@ -48,7 +48,8 @@ def getName(fullLocation):
 
 def compileShaders(shaderFiles):
     for shaderFile in shaderFiles:
-        commandString = compilerExe + " " + shaderFile + " -o " + shaderFile + ".spv"
+        # -O optimizes the shader for better performance
+        commandString = compilerExe + " -O " + shaderFile + " -o " + shaderFile + ".spv"
         print(commandString)
         os.system(commandString)
 

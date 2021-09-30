@@ -41,16 +41,17 @@ add_executable	(VulkanPlayground
 				"src/vk_mesh.cpp"									"include/vk_mesh.h"
 				"src/vk_shader.cpp"									"include/vk_shader.h"	
 				"src/Camera3D.cpp"									"include/Camera3D.h"
+				"src/GameObject.cpp"								"include/GameObject.h"
 				"src/vk_swapchain.cpp"								"include/vk_swapchain.h"		
 				"src/vk_utils.cpp"									"include/vk_utils.h"
 				"third_party/imgui/backends/imgui_impl_vulkan.cpp"	"third_party/imgui/backends/imgui_impl_vulkan.h"
 				"third_party/imgui/backends/imgui_impl_sdl.cpp"		"third_party/imgui/backends/imgui_impl_sdl.h"
 				)
 
-add_library(imgui
-			${IMGUI_SOURCES}
-			${IMGUI_HEADERS}
-)
+add_library	(imgui
+				${IMGUI_SOURCES}
+				${IMGUI_HEADERS}
+			)
 
 target_link_libraries(VulkanPlayground SDL2main)
 target_link_libraries(VulkanPlayground SDL2-static)

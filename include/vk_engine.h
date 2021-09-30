@@ -7,6 +7,7 @@
 #include "vk_mem_alloc.h"
 #include "VkBootstrap.h"
 #include "Camera3D.h"
+#include "GameObject.h"
 #include "glm/gtx/transform.hpp"
 #include "glm/glm.hpp"
 #include "vk_swapchain.h"
@@ -66,15 +67,6 @@ struct Texture {
 	VkDescriptorSet textureSet;
 };
 
-struct RenderObject {
-	std::string meshName;
-	std::string materialName;
-	std::string textureName;
-
-	glm::mat4 transformMatrix;
-	glm::vec4 color;
-};
-
 struct FrameData {
 	VkSemaphore _presentSemaphore, _renderSemaphore;
 	VkFence _renderFence;
@@ -90,7 +82,7 @@ struct FrameData {
 
 class VulkanEngine {
 public:
-	std::vector<RenderObject> _renderables;
+	std::vector<GameObject*> gameObjects;
 	
 	std::unordered_map<std::string, Texture> _loadedTextures;
 	std::unordered_map<std::string, Material> _materials;
@@ -163,7 +155,7 @@ public:
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
-	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
+	void draw_objects(VkCommandBuffer cmd);
 	VkCommandBuffer& beginOneTimeSubmit();
 	void endOneTimeSubmit(VkCommandBuffer cmdBuffer);
 	void setSamples();

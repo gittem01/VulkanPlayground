@@ -1,5 +1,5 @@
 #include <vk_engine.h>
-#include "btBulletDynamicsCommon.h"
+
 
 float getRand01() {
 	return ((double)rand()) / RAND_MAX;
@@ -8,17 +8,11 @@ float getRand01() {
 void createObjects(VulkanEngine& engine){
 	int n = 400;
 	for (int i = 0; i < n; i++) {
-		RenderObject monkey;
-		monkey.meshName = "monkey";
-		monkey.textureName = "monkey";
-		monkey.materialName = "defaultMaterial";
-		glm::mat4 translation = glm::translate(glm::mat4{ 1.0 },
-			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f));
-		glm::mat4 scale = glm::scale(glm::mat4{ 1.0 },
-			glm::vec3(0.5, 0.5, 0.5));
-		monkey.transformMatrix = translation * scale;
-		monkey.color = glm::vec4(getRand01(), getRand01(), getRand01(), 1.0f);
-		engine._renderables.push_back(monkey);
+		GameObject* g = new GameObject(&engine,
+			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f),
+			glm::vec3(0.0f),
+			glm::vec3(0.5f));
+		g->createRenderObject("monkey", "monkey");
 	}
 }
 
@@ -40,6 +34,7 @@ btDiscreteDynamicsWorld* createPhysicsWorld() {
 	dynamicsWorld->setGravity(btVector3(0, -10, 0));
 
 	btBoxShape* bs = new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
+	
 	btDefaultMotionState* ms = new btDefaultMotionState();
 	btRigidBody* body = new btRigidBody(1.0f, ms, bs);
 	dynamicsWorld->addRigidBody(body);
