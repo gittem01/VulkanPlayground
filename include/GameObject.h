@@ -18,6 +18,7 @@ class GameObject {
 public:
 
 	void* engine;
+	btDiscreteDynamicsWorld* dynamicsWorld;
 
 	RenderObject* renderObject;
 	glm::vec3 pos;
@@ -25,10 +26,11 @@ public:
 	glm::vec3 scl;
 
 	glm::mat4 objectMatrix; // transform * rotation * scale
+	glm::mat4 rotationMatrix;
 
 	btRigidBody* rigidBody;
 
-	GameObject(void* engine,
+	GameObject(void* engine, btDiscreteDynamicsWorld* dynamicsWorld,
 		glm::vec3 position = glm::vec3(),
 		glm::vec3 rotation = glm::vec3(),
 		glm::vec3 scale = glm::vec3(1, 1, 1)
@@ -36,7 +38,10 @@ public:
 
 	void reCalculateObjectMatrix();
 
-	void createRenderObject(char* meshName, char* textureName = "defaultTexture", char* materialName = "defaultMaterial");
+	void createRenderObject(char* meshName, char* materialName = "defaultMaterial", char* textureName = "defaultTexture");
+
+	// box body
+	void createRigidBody(float density);
 
 private:
 

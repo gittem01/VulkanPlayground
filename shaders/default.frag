@@ -18,8 +18,8 @@ layout(set = 0, binding = 1) uniform  SceneData{
 
 layout(set = 2, binding = 0) uniform sampler2D tex1;
 
-float ambientRatio = 0.05f;
-float specularStrength = 4.0f;
+float ambientRatio = 0.20f;
+float specularStrength = 10.0f;
 
 void main() 
 {	

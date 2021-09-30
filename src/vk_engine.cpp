@@ -114,7 +114,9 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 	}
 	else window = NULL;
 
-	camera = new Camera3D(glm::vec3(0.0f, 0.0f, 10.0f), (void*)this);
+	camera = new Camera3D(glm::vec3(-20.0f, 20.0f, 20.0f), (void*)this);
+	camera->rot.x = glm::pi<float>() / 6.0f;
+	camera->rot.y = glm::pi<float>() / 4.0f;
 
 	init_vulkan();
 
@@ -386,9 +388,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 
 	for (int i = 0; i < gameObjects.size(); i++)
 	{
-		// gameObjects.at(i)->reCalculateObjectMatrix(); // static boides does not require this
+		gameObjects.at(i)->reCalculateObjectMatrix();
 		RenderObject* object = gameObjects.at(i)->renderObject;
 		objectData[i].modelMatrix = gameObjects.at(i)->objectMatrix;
+		objectData[i].rotationMatrix = gameObjects.at(i)->rotationMatrix;
 		objectData[i].objectColor = object->color;
 	}
 

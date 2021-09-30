@@ -19,6 +19,7 @@ layout(set = 0, binding = 0) uniform CameraData{
 
 struct ObjectData{
 	mat4 model;
+	mat4 rotationMatrix;
 	vec4 color;
 };
 
@@ -30,9 +31,10 @@ layout(std140, set = 1, binding = 0) readonly buffer ObjectBuffer {
 
 void main() {
 	mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model;
+	mat4 rotationMatrix = objectBuffer.objects[gl_BaseInstance].rotationMatrix;
 	mat4 transformMatrix = cameraData.viewproj * modelMatrix;
 	objectColor = objectBuffer.objects[gl_BaseInstance].color;
-	normal = vNormal;
+	normal = vec3(rotationMatrix * vec4(vNormal, 1));
 	texCoord = vTexCoord;
 	fragWorldPos = vec3(modelMatrix * vec4(vPosition, 1.0f));
 	cameraPos = cameraData.cameraPos;

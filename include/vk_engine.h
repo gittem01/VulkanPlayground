@@ -19,6 +19,7 @@
 #include "imgui.h"
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_vulkan.h"
+#include "btBulletDynamicsCommon.h"
 
 #include <iostream>
 #include <fstream>
@@ -37,6 +38,7 @@ struct UploadContext {
 
 struct GPUObjectData{
 	glm::mat4 modelMatrix;
+	glm::mat4 rotationMatrix;
 	glm::vec4 objectColor;
 };
 
