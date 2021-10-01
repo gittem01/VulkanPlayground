@@ -88,7 +88,10 @@ public:
 
 	glm::vec3 getVectorAngle(glm::vec3 vec);
 
-	// gets the body that is in the middle of the screen
-	btCollisionWorld::ClosestRayResultCallback& getRayBody();
+	btCollisionWorld::ClosestRayResultCallback& rayToCenter();
+
+	// rays to anywhere on the screen
+	btCollisionWorld::ClosestRayResultCallback& rayToPosition(glm::vec2 rayPos);
+	btCollisionWorld::ClosestRayResultCallback& rayToMouse();
 };
 

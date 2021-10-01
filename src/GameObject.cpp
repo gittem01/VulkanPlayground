@@ -29,10 +29,12 @@ void GameObject::reCalculateObjectMatrix() {
 
 		if (rigidBody->getMass() > 0) {
 			if (!rigidBody->isActive()) {
-				renderObject->color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+				renderObject->color.y = 0.0f;
+				renderObject->color.x = 1.0f;
 			}
 			else {
-				renderObject->color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+				renderObject->color.x = 0.0f;
+				renderObject->color.y = 1.0f;
 			}
 		}
 	}
@@ -69,7 +71,7 @@ void GameObject::createRigidBody(float density) {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 
 	btBoxShape* bs = new btBoxShape(btVector3(scl.x, scl.y, scl.z));
-
+	
 	btVector3 inertia;
 	bs->calculateLocalInertia(density, inertia);
 	btDefaultMotionState* ms = new btDefaultMotionState();
@@ -88,4 +90,6 @@ void GameObject::createRigidBody(float density) {
 	rigidBody = new btRigidBody(density, ms, bs, inertia);
 	rigidBody->setFriction(1.0f);
 	egn->dynamicsWorld->addRigidBody(rigidBody);
+
+	bs->setUserPointer((void*)this);
 }

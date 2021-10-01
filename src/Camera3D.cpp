@@ -36,7 +36,7 @@ Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 glm::mat4 Camera3D::getPers()
 {
 	return glm::perspective(glm::radians(zoom), 
-		(float)((VulkanEngine*) engine)->winExtent.width / (float)((VulkanEngine*) engine)->winExtent.height, 0.001f, 500.0f);
+		(float)((VulkanEngine*)engine)->winExtent.width / (float)((VulkanEngine*)engine)->winExtent.height, 0.001f, 500.0f);
 }
 
 glm::mat4 Camera3D::getView(bool posIncl)
@@ -263,7 +263,41 @@ glm::vec3 Camera3D::getVectorAngle(glm::vec3 vec){
 	return glm::vec3(angleX, angleY, 0);
 }
 
-btCollisionWorld::ClosestRayResultCallback& Camera3D::getRayBody() {
+btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToMouse() {
+	return rayToPosition(glm::vec2	(
+										reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.x, 
+										reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.y
+									)
+	);
+}
+
+btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToPosition(glm::vec2 rayPos) {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
+	glm::vec2 screenProportion = rayPos / glm::vec2(egn->winExtent.width, egn->winExtent.height);
+
+	// excluding camera position to get only the direction
+	glm::mat4 posExcldView = getView(false);
+
+	glm::vec4 viewport = glm::vec4(0, 0, egn->winExtent.width, egn->winExtent.height);
+	glm::vec3 screenPos = glm::vec3(rayPos.x, rayPos.y, 1.0f);
+	glm::vec3 aimDir = glm::unProject(screenPos, posExcldView, pers, viewport);
+	aimDir = glm::normalize(aimDir);
+
+	btVector3 from(pos.x, pos.y, pos.z);
+	btVector3 to(	pos.x + aimDir.x * 10000.0f,
+					pos.y + aimDir.y * 10000.0f,
+					pos.z + aimDir.z * 10000.0f
+	);
+
+	btCollisionWorld::ClosestRayResultCallback closestResult(from, to);
+
+	egn->dynamicsWorld->rayTest(from, to, closestResult);
+
+	return closestResult;
+}
+
+btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToCenter() {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 	
 	btVector3 from(pos.x, pos.y, pos.z);

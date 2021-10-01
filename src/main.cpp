@@ -56,7 +56,6 @@ int main(int argc, char* argv[]){
 	engine.get_image("../../assets/defaultTexture.png", "defaultTexture");
 
 	
-	
 	createObjects(engine, world);
 
 	bool done = false;
@@ -73,7 +72,12 @@ int main(int argc, char* argv[]){
 		}
 
 		world->stepSimulation(engine.io->DeltaTime);
-		printf("%d\n", engine.camera->getRayBody().hasHit());
+
+		btCollisionWorld::ClosestRayResultCallback rayRes = engine.camera->rayToMouse();
+		if (rayRes.hasHit() && engine.io->MouseDownDuration[0] == 0.0f) {
+			GameObject* object = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
+			object->renderObject->color.z = 1.0f;
+		}
 	}
 
 	return 0;
