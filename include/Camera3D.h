@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "btBulletDynamicsCommon.h"
 #include <math.h>
 
 #define BASE_MULT 0.25f
@@ -86,5 +87,8 @@ public:
 	void controlRotation(glm::vec3* rot);
 
 	glm::vec3 getVectorAngle(glm::vec3 vec);
+
+	// gets the body that is in the middle of the screen
+	btCollisionWorld::ClosestRayResultCallback& getRayBody();
 };
 

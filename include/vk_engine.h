@@ -140,9 +140,10 @@ public:
 
 	UploadContext _uploadContext;
 
+	btDiscreteDynamicsWorld* dynamicsWorld;
 	Camera3D* camera;
 
-	VulkanEngine(uint32_t width, uint32_t height);
+	VulkanEngine(uint32_t width, uint32_t height, btDiscreteDynamicsWorld* dynamicsWorld=NULL);
 	~VulkanEngine();
 
 	void get_mesh(std::string meshPath, const char* meshName);

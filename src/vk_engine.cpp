@@ -15,7 +15,8 @@
 	}																\
 }
 
-VulkanEngine::VulkanEngine(uint32_t width, uint32_t height) {
+VulkanEngine::VulkanEngine(uint32_t width, uint32_t height, btDiscreteDynamicsWorld* dynamicsWorld) {
+	this->dynamicsWorld = dynamicsWorld;
 	init(width, height);
 }
 

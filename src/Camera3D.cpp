@@ -262,3 +262,19 @@ glm::vec3 Camera3D::getVectorAngle(glm::vec3 vec){
 
 	return glm::vec3(angleX, angleY, 0);
 }
+
+btCollisionWorld::ClosestRayResultCallback& Camera3D::getRayBody() {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+	
+	btVector3 from(pos.x, pos.y, pos.z);
+	btVector3 to(	pos.x + lookDir.x * 10000.0f,
+					pos.y + lookDir.y * 10000.0f,
+					pos.z + lookDir.z * 10000.0f
+	);
+
+	btCollisionWorld::ClosestRayResultCallback closestResult(from, to);
+
+	egn->dynamicsWorld->rayTest(from, to, closestResult);
+
+	return closestResult;
+}

@@ -1,11 +1,10 @@
 #include "GameObject.h"
 #include "vk_engine.h"
 
-GameObject::GameObject(void* engine, btDiscreteDynamicsWorld* dynamicsWorld,
+GameObject::GameObject(void* engine,
 	glm::vec3 position, glm::vec3 rotation, glm::vec3 scale){
 
 	this->engine = engine;
-	this->dynamicsWorld = dynamicsWorld;
 
 	this->renderObject = NULL;
 	this->rigidBody = NULL;
@@ -67,6 +66,8 @@ void GameObject::createRenderObject(char* meshName, char* materialName, char* te
 }
 
 void GameObject::createRigidBody(float density) {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
 	btBoxShape* bs = new btBoxShape(btVector3(scl.x, scl.y, scl.z));
 
 	btVector3 inertia;
@@ -86,5 +87,5 @@ void GameObject::createRigidBody(float density) {
 
 	rigidBody = new btRigidBody(density, ms, bs, inertia);
 	rigidBody->setFriction(1.0f);
-	dynamicsWorld->addRigidBody(rigidBody);
+	egn->dynamicsWorld->addRigidBody(rigidBody);
 }

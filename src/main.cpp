@@ -6,7 +6,7 @@ float getRand01() {
 }
 
 void createObjects(VulkanEngine& engine, btDiscreteDynamicsWorld* dynamicsWorld){
-	GameObject* g = new GameObject(&engine, dynamicsWorld,
+	GameObject* g = new GameObject(&engine,
 		glm::vec3(0.0f, -10.0f, 0.0f),
 		glm::vec3(0.0f),
 		glm::vec3(50.0f, 1.0f, 50.0f));
@@ -15,7 +15,7 @@ void createObjects(VulkanEngine& engine, btDiscreteDynamicsWorld* dynamicsWorld)
 
 	int n = 200;
 	for (int i = 0; i < n; i++) {
-		g = new GameObject(&engine, dynamicsWorld,
+		g = new GameObject(&engine,
 			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f),
 			glm::vec3(0.0f),
 			glm::vec3(0.5f));
@@ -45,7 +45,9 @@ btDiscreteDynamicsWorld* createPhysicsWorld() {
 }
 
 int main(int argc, char* argv[]){
-	VulkanEngine engine(1300, 700);
+	btDiscreteDynamicsWorld* world = createPhysicsWorld();
+
+	VulkanEngine engine(1300, 700, world);
 	
 	engine.get_mesh("../../assets/monkey_flat.obj", "monkey");
 	engine.get_mesh("../../assets/box.obj", "box");
@@ -53,7 +55,7 @@ int main(int argc, char* argv[]){
 	engine.get_image("../../assets/monkey.png", "monkey");
 	engine.get_image("../../assets/defaultTexture.png", "defaultTexture");
 
-	btDiscreteDynamicsWorld* world = createPhysicsWorld();
+	
 	
 	createObjects(engine, world);
 
@@ -71,6 +73,7 @@ int main(int argc, char* argv[]){
 		}
 
 		world->stepSimulation(engine.io->DeltaTime);
+		printf("%d\n", engine.camera->getRayBody().hasHit());
 	}
 
 	return 0;

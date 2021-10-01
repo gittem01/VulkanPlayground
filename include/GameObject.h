@@ -18,7 +18,6 @@ class GameObject {
 public:
 
 	void* engine;
-	btDiscreteDynamicsWorld* dynamicsWorld;
 
 	RenderObject* renderObject;
 	glm::vec3 pos;
@@ -30,7 +29,7 @@ public:
 
 	btRigidBody* rigidBody;
 
-	GameObject(void* engine, btDiscreteDynamicsWorld* dynamicsWorld,
+	GameObject(void* engine,
 		glm::vec3 position = glm::vec3(),
 		glm::vec3 rotation = glm::vec3(),
 		glm::vec3 scale = glm::vec3(1, 1, 1)
