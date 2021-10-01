@@ -13,7 +13,7 @@ void createObjects(VulkanEngine& engine, btDiscreteDynamicsWorld* dynamicsWorld)
 	g->createRenderObject("box");
 	g->createRigidBody(0.0f);
 
-	int n = 400;
+	int n = 200;
 	for (int i = 0; i < n; i++) {
 		g = new GameObject(&engine, dynamicsWorld,
 			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f),

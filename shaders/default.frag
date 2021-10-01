@@ -18,21 +18,21 @@ layout(set = 0, binding = 1) uniform  SceneData{
 
 layout(set = 2, binding = 0) uniform sampler2D tex1;
 
-float ambientRatio = 0.20f;
-float specularStrength = 10.0f;
+float ambientRatio = 0.10f;
+float brightness = 0.5f;
 
 void main() 
 {	
 	float diff = max(dot(vec4(normal, 1.0f), sceneData.sunlightDirection), 0.0);
-	vec3 diffuse = vec3(diff * objectColor * (1 - ambientRatio));
-	vec3 ambient = ambientRatio * objectColor.xyz;
+	vec3 diffuse = vec3(diff * objectColor * (1 * brightness - ambientRatio));
+	vec3 ambient = ambientRatio * objectColor.xyz * sceneData.ambientColor.xyz * brightness;
 	vec3 texColor = texture(tex1, texCoord).xyz;
 
 	vec3 viewDir = normalize(cameraPos - fragWorldPos);
-	vec3 reflectDir = reflect(-vec3(sceneData.sunlightDirection), normal);
+	vec3 reflectDir = reflect(-sceneData.sunlightDirection.xyz, normal);
 
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-	vec3 specular = specularStrength * spec * vec3(1, 1, 1);  
+	vec3 specular = spec * sceneData.sunlightColor.xyz * sceneData.sunlightColor[3];
 
 	//outFragColor = vec4(vec3(diffuse), 1.0f);
 	outFragColor = vec4((diffuse + ambient + specular) * texColor, 1.0f);
