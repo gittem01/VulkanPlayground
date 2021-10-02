@@ -58,7 +58,12 @@ ImDrawData* VulkanEngine::imguiLoop() {
 		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 	camera->isAnyWindowHovered |= ImGui::IsWindowHovered();
 	
-	ImGui::Text("FPS: %.1f", io->Framerate);
+	if (io->DeltaTime > 0.0f) {
+		ImGui::Text("FPS: %.1f", 1.0f / io->DeltaTime);
+	}
+	else {
+		ImGui::Text("FPS: 0.0");
+	}
 
 	ImGui::Checkbox("camera keyboard movement smoothness", &camera->enableKeyPosSmth);
 	ImGui::Checkbox("camera rotation smoothness", &camera->enableRotSmth);
