@@ -62,9 +62,10 @@ public:
 	glm::mat4 pers;
 	glm::mat4 view;
 
-	glm::vec3 lookDir = glm::vec3(0, 0, -1);
-	glm::vec3 topVec = glm::vec3(0, 1, 0);
-	glm::vec3 rightVec = glm::vec3(1, 0, 0);;
+	glm::vec3 lookDir;
+	glm::vec3 topVec;
+	glm::vec3 realTopVec;
+	glm::vec3 rightVec;
 
 	CameraTypes cameraType = SURROUNDER;
 
@@ -73,13 +74,15 @@ public:
 
 	glm::mat4 getPers();
 	glm::mat4 getView(bool posIncl);
+
 	void changeZoom(float inc);
 	float limitZoom(float inZoom);
 	void rotateFunc();
 	void keyControl();
 
-	glm::vec3 rotatePoint(glm::vec3 point, glm::vec3 rotAngles);
-	glm::vec3 rotatePointArround(glm::vec3 point, glm::vec3 arroundPoint, glm::vec3 rotAngles);
+	// calculates the top and right vector according to lookDir
+	void calculateTopRight();
+	
 	void updateLookDir();
 	void updatePos();
 	void updateZoom();
@@ -87,6 +90,8 @@ public:
 	void controlRotation(glm::vec3* rot);
 
 	glm::vec3 getVectorAngle(glm::vec3 vec);
+	glm::vec3 rotatePoint(glm::vec3 point, glm::vec3 rotAngles);
+	glm::vec3 rotatePointArround(glm::vec3 point, glm::vec3 arroundPoint, glm::vec3 rotAngles);
 
 	btCollisionWorld::ClosestRayResultCallback& rayToCenter();
 

@@ -29,10 +29,9 @@ void main()
 	vec3 texColor = texture(tex1, texCoord).xyz;
 
 	vec3 viewDir = normalize(cameraPos - fragWorldPos);
-	vec3 reflectDir = reflect(-sceneData.sunlightDirection.xyz, normal);
-
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-	vec3 specular = spec * sceneData.sunlightColor.xyz * sceneData.sunlightColor[3];
+	vec3 reflectDir = normalize(reflect(-sceneData.sunlightDirection.xyz, normal));
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 512);
+	vec3 specular = spec * sceneData.sunlightColor.xyz * sceneData.sunlightColor[3] * 100;
 
 	//outFragColor = vec4(vec3(diffuse), 1.0f);
 	outFragColor = vec4((diffuse + ambient + specular) * texColor, 1.0f);

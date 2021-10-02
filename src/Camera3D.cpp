@@ -16,6 +16,11 @@ Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 
 	this->pers = this->getPers();
 
+	lookDir = glm::vec3(0, 0, -1);
+	topVec = glm::vec3(0, 1, 0);
+	rightVec = glm::vec3(1, 0, 0);;
+	realTopVec = topVec;
+
 	strings[0] = (char*)"camera keyboard movement speed";
 	strings[1] = (char*)"camera rotation speed";
 	strings[2] = (char*)"camera wheel movement speed";
@@ -87,6 +92,11 @@ void Camera3D::updateZoom() {
 	}
 }
 
+void Camera3D::calculateTopRight() {
+	rightVec = glm::normalize(glm::cross(topVec, lookDir));
+	realTopVec = glm::normalize(glm::cross(lookDir, rightVec));
+}
+
 void Camera3D::update()
 {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
@@ -103,8 +113,6 @@ void Camera3D::update()
 
 		rotateFunc();
 	}
-
-	rightVec = glm::normalize(glm::cross(topVec, lookDir));
 	
 	pers = getPers();
 	view = getView(true);
@@ -156,10 +164,8 @@ void Camera3D::updateLookDir() {
 
 	if (cameraType == SURROUNDER) {
 		if (!egn->io->MouseDownOwned[2] && egn->io->MouseDown[2] && egn->io->KeysDown[SDL_SCANCODE_LALT]) {
-			glm::vec3 yVec = glm::normalize(glm::cross(lookDir, rightVec));
-
 			posAim += rightVec * (egn->io->MouseDelta.x * 0.01f);
-			posAim += yVec * (egn->io->MouseDelta.y * 0.01f);
+			posAim += realTopVec * (egn->io->MouseDelta.y * 0.01f);
 		}
 		glm::vec3 diff = posAim * (wheelPosSmth * egn->io->DeltaTime * (float)enableWheelPosSmth + (1 - enableWheelPosSmth));
 		pos += diff;
@@ -185,6 +191,7 @@ void Camera3D::rotateFunc()
 void Camera3D::updatePos()
 {
 	updateLookDir();
+	calculateTopRight();
 	keyControl();
 }
 
