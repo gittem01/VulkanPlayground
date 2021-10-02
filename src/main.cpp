@@ -1,12 +1,16 @@
 #include <vk_engine.h>
 
+VulkanEngine* engine;
+btDiscreteDynamicsWorld* world;
+
+int rayMasks = btCollisionObject::CF_DYNAMIC_OBJECT | btCollisionObject::CF_KINEMATIC_OBJECT;
 
 float getRand01() {
 	return ((double)rand()) / RAND_MAX;
 }
 
-void createObjects(VulkanEngine& engine, btDiscreteDynamicsWorld* dynamicsWorld){
-	GameObject* g = new GameObject(&engine,
+void createObjects(){
+	GameObject* g = new GameObject(engine,
 		glm::vec3(0.0f, -10.0f, 0.0f),
 		glm::vec3(0.0f),
 		glm::vec3(50.0f, 1.0f, 50.0f));
@@ -15,7 +19,7 @@ void createObjects(VulkanEngine& engine, btDiscreteDynamicsWorld* dynamicsWorld)
 
 	int n = 200;
 	for (int i = 0; i < n; i++) {
-		g = new GameObject(&engine,
+		g = new GameObject(engine,
 			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f),
 			glm::vec3(0.0f),
 			glm::vec3(0.5f));
@@ -24,7 +28,7 @@ void createObjects(VulkanEngine& engine, btDiscreteDynamicsWorld* dynamicsWorld)
 	}
 }
 
-btDiscreteDynamicsWorld* createPhysicsWorld() {
+void createPhysicsWorld() {
 	///collision configuration contains default setup for memory, collision setup
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
 	collisionConfiguration->setConvexConvexMultipointIterations();
@@ -37,32 +41,44 @@ btDiscreteDynamicsWorld* createPhysicsWorld() {
 	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
 	btSequentialImpulseConstraintSolver* sol = new btSequentialImpulseConstraintSolver;
 	
-	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, sol, collisionConfiguration);
+	world = new btDiscreteDynamicsWorld(dispatcher, broadphase, sol, collisionConfiguration);
 
-	dynamicsWorld->setGravity(btVector3(0, -10, 0));
-
-	return dynamicsWorld;
+	world->setGravity(btVector3(0, -10, 0));
 }
 
+void handleRays() {
+	btCollisionWorld::ClosestRayResultCallback rayRes = engine->camera->rayToMouse();
+	if (rayRes.hasHit()) {
+		bool flags = (rayRes.m_collisionObject->getCollisionFlags() & rayMasks) ||
+			(rayRes.m_collisionObject->getCollisionFlags() == 0);
+		if (flags) {
+			GameObject* object = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
+			rayRes.m_collisionObject->getCollisionFlags();
+			object->renderObject->color.z = 1.0f;
+		}
+	}
+}
+
+
 int main(int argc, char* argv[]){
-	btDiscreteDynamicsWorld* world = createPhysicsWorld();
+	createPhysicsWorld();
 
-	VulkanEngine engine(1300, 700, world);
+	engine = new VulkanEngine(1300, 700, world);
 	
-	engine.get_mesh("../../assets/monkey_flat.obj", "monkey");
-	engine.get_mesh("../../assets/box.obj", "box");
+	engine->get_mesh("../../assets/monkey_flat.obj", "monkey");
+	engine->get_mesh("../../assets/box.obj", "box");
 
-	engine.get_image("../../assets/monkey.png", "monkey");
-	engine.get_image("../../assets/defaultTexture.png", "defaultTexture");
+	engine->get_image("../../assets/monkey.png", "monkey");
+	engine->get_image("../../assets/defaultTexture.png", "defaultTexture");
 
 	
-	createObjects(engine, world);
+	createObjects();
 
 	bool done = false;
 	while (!done) {
-		done = engine.looper();
+		done = engine->looper();
 
-		if (engine.io->KeysDown[SDL_SCANCODE_SPACE]) {
+		if (engine->io->KeysDown[SDL_SCANCODE_SPACE]) {
 			for (int i = 0; i < world->getNonStaticRigidBodies().size(); i++) {
 				btRigidBody* rb = world->getNonStaticRigidBodies().at(i);
 				rb->activate();
@@ -71,12 +87,10 @@ int main(int argc, char* argv[]){
 			}
 		}
 
-		world->stepSimulation(engine.io->DeltaTime);
+		world->stepSimulation(engine->io->DeltaTime);
 
-		btCollisionWorld::ClosestRayResultCallback rayRes = engine.camera->rayToMouse();
-		if (rayRes.hasHit() && engine.io->MouseDownDuration[0] == 0.0f) {
-			GameObject* object = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
-			object->renderObject->color.z = 1.0f;
+		if (engine->io->MouseDownDuration[0] == 0.0f) {
+			handleRays();
 		}
 	}
 
