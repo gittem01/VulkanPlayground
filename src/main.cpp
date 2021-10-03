@@ -3,6 +3,8 @@
 VulkanEngine* engine;
 btDiscreteDynamicsWorld* world;
 
+GameObject* clickedObject = NULL;
+
 int rayMasks = btCollisionObject::CF_DYNAMIC_OBJECT | btCollisionObject::CF_KINEMATIC_OBJECT;
 
 float getRand01() {
@@ -59,6 +61,34 @@ void handleRays() {
 	}
 }
 
+void mouseForce() {
+	if (!clickedObject) {
+		btCollisionWorld::ClosestRayResultCallback rayRes = engine->camera->rayToMouse();
+		if (rayRes.hasHit()) {
+			bool flags = (rayRes.m_collisionObject->getCollisionFlags() & rayMasks) ||
+				(rayRes.m_collisionObject->getCollisionFlags() == 0);
+			if (flags) {
+				clickedObject = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
+				rayRes.m_collisionObject->getCollisionFlags();
+				clickedObject->renderObject->color.z = 1.0f;
+			}
+		}
+	}
+	else {
+		engine->io->MouseDelta;
+		engine->camera->rightVec;
+		engine->camera->realTopVec;
+		glm::vec3 rightForceGLM = engine->camera->rightVec * engine->io->MouseDelta.x;
+		btVector3 rightForce = btVector3(rightForceGLM.x, rightForceGLM.y, rightForceGLM.z);
+
+		glm::vec3 topForceGLM = engine->camera->realTopVec * engine->io->MouseDelta.y;
+		btVector3 topForce = btVector3(topForceGLM.x, topForceGLM.y, topForceGLM.z);
+
+		clickedObject->rigidBody->activate();
+		clickedObject->rigidBody->applyCentralImpulse((topForce + rightForce) * -0.1f);
+	}
+}
+
 
 int main(int argc, char* argv[]){
 	createPhysicsWorld();
@@ -89,8 +119,16 @@ int main(int argc, char* argv[]){
 
 		world->stepSimulation(engine->io->DeltaTime);
 
-		if (engine->io->MouseDownDuration[0] == 0.0f) {
+		if (engine->io->MouseDownDuration[1] == 0.0f) {
 			handleRays();
+		}
+
+		if (engine->io->MouseDownDuration[0] >= 0.0f) {
+			mouseForce();
+		}
+		else if (clickedObject && !engine->io->MouseDown[0]) {
+			clickedObject->renderObject->color.z = 0.0f;
+			clickedObject = NULL;
 		}
 	}
 
