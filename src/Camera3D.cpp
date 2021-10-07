@@ -40,7 +40,7 @@ Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 glm::mat4 Camera3D::getPers()
 {
 	return glm::perspective(glm::radians(zoom), 
-		(float)((VulkanEngine*)engine)->winExtent.width / (float)((VulkanEngine*)engine)->winExtent.height, 0.001f, 500.0f);
+		(float)((VulkanEngine*)engine)->winExtent.width / (float)((VulkanEngine*)engine)->winExtent.height, 0.1f, 500.0f);
 }
 
 glm::mat4 Camera3D::getView(bool posIncl)
