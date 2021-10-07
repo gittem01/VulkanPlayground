@@ -22,12 +22,12 @@ void createObjects(){
 	g->createRenderObject("box");
 	g->createRigidBody(0.0f);
 
-	int n = 200;
+	int n = 100;
 	for (int i = 0; i < n; i++) {
 		g = new GameObject(engine,
 			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f),
 			glm::vec3(0.0f),
-			glm::vec3(0.5f));
+			glm::vec3(getRand01() + 0.3f, getRand01() + 0.3f, getRand01() + 0.3f));
 		g->createRenderObject("box");
 		g->createRigidBody(1.0f);
 	}
@@ -102,7 +102,6 @@ int main(int argc, char* argv[]){
 	engine->get_image("../../assets/monkey.png", "monkey");
 	engine->get_image("../../assets/defaultTexture.png", "defaultTexture");
 
-	
 	createObjects();
 
 	bool done = false;
@@ -133,6 +132,15 @@ int main(int argc, char* argv[]){
 				delete mouseJoint;
 				mouseJoint = NULL;
 				clickedObject = NULL;
+			}
+		}
+		if (clickedObject) {
+			if (engine->io->KeysDownDuration[SDL_SCANCODE_Z] >= 0) {
+				clickDist -= 20.0f * engine->io->DeltaTime;
+				if (clickDist < 5.0f) clickDist = 5.0f;
+			}
+			if (engine->io->KeysDownDuration[SDL_SCANCODE_X] >= 0) {
+				clickDist += 20.0f * engine->io->DeltaTime;
 			}
 		}
 	}
