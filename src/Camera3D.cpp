@@ -37,7 +37,6 @@ Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 	baseValues[3] = &zoomSpeed_b;
 }
 
-
 glm::mat4 Camera3D::getPers()
 {
 	return glm::perspective(glm::radians(zoom), 
@@ -270,31 +269,34 @@ glm::vec3 Camera3D::getVectorAngle(glm::vec3 vec){
 	return glm::vec3(angleX, angleY, 0);
 }
 
-btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToMouse() {
-	return rayToPosition(glm::vec2	(
-										reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.x, 
-										reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.y
-									)
-	);
-}
-
-btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToPosition(glm::vec2 rayPos) {
+glm::vec3 Camera3D::getRayDir(int x, int y) {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
-
-	glm::vec2 screenProportion = rayPos / glm::vec2(egn->winExtent.width, egn->winExtent.height);
 
 	// excluding camera position to get only the direction
 	glm::mat4 posExcldView = getView(false);
 
 	glm::vec4 viewport = glm::vec4(0, 0, egn->winExtent.width, egn->winExtent.height);
-	glm::vec3 screenPos = glm::vec3(rayPos.x, rayPos.y, 1.0f);
-	glm::vec3 aimDir = glm::unProject(screenPos, posExcldView, pers, viewport);
-	aimDir = glm::normalize(aimDir);
+	glm::vec3 screenPos = glm::vec3(x, y, 1.0f);
+	glm::vec3 aimDir = glm::normalize(glm::unProject(screenPos, posExcldView, pers, viewport));
 
-	btVector3 from(pos.x, pos.y, pos.z);
-	btVector3 to(	pos.x + aimDir.x * 10000.0f,
-					pos.y + aimDir.y * 10000.0f,
-					pos.z + aimDir.z * 10000.0f
+	return aimDir;
+}
+
+btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToMouse() {
+	return rayToPosition(glm::vec2	(	reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.x, 
+										reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.y 
+									));
+}
+
+btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToPosition(glm::vec2 rayPos) {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
+	glm::vec3 aimDir = getRayDir((int)rayPos.x, (int)rayPos.y);
+
+	btVector3 from(	pos.x, pos.y, pos.z);
+	btVector3 to(	pos.x + aimDir.x * 1000.0f,
+					pos.y + aimDir.y * 1000.0f,
+					pos.z + aimDir.z * 1000.0f
 	);
 
 	btCollisionWorld::ClosestRayResultCallback closestResult(from, to);

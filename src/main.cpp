@@ -3,9 +3,10 @@
 VulkanEngine* engine = NULL;
 btDiscreteDynamicsWorld* world = NULL;
 
-btVector3* mouseBodyAim = NULL;
-
+btPoint2PointConstraint* mouseJoint = NULL;
 GameObject* clickedObject = NULL;
+float clickDist;
+
 
 int rayMasks = btCollisionObject::CF_DYNAMIC_OBJECT | btCollisionObject::CF_KINEMATIC_OBJECT;
 
@@ -50,19 +51,6 @@ void createPhysicsWorld() {
 	world->setGravity(btVector3(0, -10, 0));
 }
 
-void handleRays() {
-	btCollisionWorld::ClosestRayResultCallback rayRes = engine->camera->rayToMouse();
-	if (rayRes.hasHit()) {
-		bool flags = (rayRes.m_collisionObject->getCollisionFlags() & rayMasks) ||
-			(rayRes.m_collisionObject->getCollisionFlags() == 0);
-		if (flags) {
-			GameObject* object = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
-			rayRes.m_collisionObject->getCollisionFlags();
-			object->renderObject->color.z = 1.0f;
-		}
-	}
-}
-
 void mouseForce() {
 	if (!clickedObject) {
 		btCollisionWorld::ClosestRayResultCallback rayRes = engine->camera->rayToMouse();
@@ -72,31 +60,33 @@ void mouseForce() {
 				clickedObject = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
 				rayRes.m_collisionObject->getCollisionFlags();
 				clickedObject->renderObject->color.z = 1.0f;
-				mouseBodyAim = new btVector3(rayRes.m_hitPointWorld.getX(), rayRes.m_hitPointWorld.getY(), rayRes.m_hitPointWorld.getZ());
+
+				btVector3 hitPoint = rayRes.m_hitPointWorld;
+
+				btVector3 camBtPos = btVector3(engine->camera->pos.x, engine->camera->pos.y, engine->camera->pos.z);
+				clickDist = (camBtPos - hitPoint).length();
+
+				clickedObject->rigidBody->activate();
+				btVector3 localPivot = clickedObject->rigidBody->getCenterOfMassTransform().inverse() * hitPoint;
+				mouseJoint = new btPoint2PointConstraint(*clickedObject->rigidBody, localPivot);
+				world->addConstraint(mouseJoint, true);
+
+				mouseJoint->m_setting.m_impulseClamp = 30.f;
+				mouseJoint->m_setting.m_tau = 0.001f;
 			}
 		}
 	}
 	else {
-		engine->io->MouseDelta;
-		engine->camera->rightVec;
-		engine->camera->realTopVec;
-		glm::vec3 rightForceGLM = engine->camera->rightVec * engine->io->MouseDelta.x;
-		btVector3 rightForce = btVector3(rightForceGLM.x, rightForceGLM.y, rightForceGLM.z);
+		btVector3 camBtPos = btVector3(engine->camera->pos.x, engine->camera->pos.y, engine->camera->pos.z);
+		glm::vec3 rayDir = engine->camera->getRayDir((int)engine->io->MousePos.x, (int)engine->io->MousePos.y);
+		btVector3 rayDirBt = btVector3(rayDir.x, rayDir.y, rayDir.z);
 
-		glm::vec3 topForceGLM = engine->camera->realTopVec * engine->io->MouseDelta.y;
-		btVector3 topForce = btVector3(topForceGLM.x, topForceGLM.y, topForceGLM.z);
-
-		btVector3 diff = btVector3();
-		
-		if (mouseBodyAim) {
-			*mouseBodyAim += rightForce * -0.05f + topForce * -0.05f;
-			diff = *mouseBodyAim - clickedObject->rigidBody->getCenterOfMassPosition();
-			btVector3 velocity = clickedObject->rigidBody->getLinearVelocity();			
-			clickedObject->rigidBody->setLinearVelocity(velocity - velocity * 0.1f);
+		btPoint2PointConstraint* pickConstr = static_cast<btPoint2PointConstraint*>(mouseJoint);
+		if (pickConstr)
+		{
+			rayDirBt *= clickDist;
+			pickConstr->setPivotB(rayDirBt + camBtPos);
 		}
-
-		clickedObject->rigidBody->activate();
-		clickedObject->rigidBody->applyCentralImpulse(diff);
 	}
 }
 
@@ -130,17 +120,20 @@ int main(int argc, char* argv[]){
 
 		world->stepSimulation(engine->io->DeltaTime);
 
-		if (engine->io->MouseDownDuration[1] == 0.0f) {
-			handleRays();
-		}
-
 		if (engine->io->MouseDownDuration[0] >= 0.0f) {
 			mouseForce();
 		}
 		else if (clickedObject && !engine->io->MouseDown[0]) {
 			clickedObject->renderObject->color.z = 0.0f;
-			clickedObject =  NULL;
-			mouseBodyAim =   NULL;
+
+			if (mouseJoint)
+			{
+				clickedObject->rigidBody->activate();
+				world->removeConstraint(mouseJoint);
+				delete mouseJoint;
+				mouseJoint = NULL;
+				clickedObject = NULL;
+			}
 		}
 	}
 

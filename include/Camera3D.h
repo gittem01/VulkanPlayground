@@ -93,6 +93,8 @@ public:
 	glm::vec3 rotatePoint(glm::vec3 point, glm::vec3 rotAngles);
 	glm::vec3 rotatePointArround(glm::vec3 point, glm::vec3 arroundPoint, glm::vec3 rotAngles);
 
+	glm::vec3 getRayDir(int x, int y); // screen pixel positions
+
 	btCollisionWorld::ClosestRayResultCallback& rayToCenter();
 
 	// rays to anywhere on the screen
