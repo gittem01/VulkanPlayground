@@ -19,7 +19,5 @@ make
 
 #
 # Possible future additions
-- more imgui stuff
-- GameObject like class to handle objects
-- bulletphysics integration
-- bloom, shadows and more stuff like that
+- bloom, shadows
+- camera culling
