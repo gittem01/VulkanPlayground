@@ -1,7 +1,9 @@
 #include <vk_engine.h>
 
-VulkanEngine* engine;
-btDiscreteDynamicsWorld* world;
+VulkanEngine* engine = NULL;
+btDiscreteDynamicsWorld* world = NULL;
+
+btVector3* mouseBodyAim = NULL;
 
 GameObject* clickedObject = NULL;
 
@@ -65,12 +67,12 @@ void mouseForce() {
 	if (!clickedObject) {
 		btCollisionWorld::ClosestRayResultCallback rayRes = engine->camera->rayToMouse();
 		if (rayRes.hasHit()) {
-			bool flags = (rayRes.m_collisionObject->getCollisionFlags() & rayMasks) ||
-				(rayRes.m_collisionObject->getCollisionFlags() == 0);
+			bool flags = (rayRes.m_collisionObject->getCollisionFlags() & rayMasks) || (rayRes.m_collisionObject->getCollisionFlags() == 0);
 			if (flags) {
 				clickedObject = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
 				rayRes.m_collisionObject->getCollisionFlags();
 				clickedObject->renderObject->color.z = 1.0f;
+				mouseBodyAim = new btVector3(rayRes.m_hitPointWorld.getX(), rayRes.m_hitPointWorld.getY(), rayRes.m_hitPointWorld.getZ());
 			}
 		}
 	}
@@ -84,8 +86,17 @@ void mouseForce() {
 		glm::vec3 topForceGLM = engine->camera->realTopVec * engine->io->MouseDelta.y;
 		btVector3 topForce = btVector3(topForceGLM.x, topForceGLM.y, topForceGLM.z);
 
+		btVector3 diff = btVector3();
+		
+		if (mouseBodyAim) {
+			*mouseBodyAim += rightForce * -0.05f + topForce * -0.05f;
+			diff = *mouseBodyAim - clickedObject->rigidBody->getCenterOfMassPosition();
+			btVector3 velocity = clickedObject->rigidBody->getLinearVelocity();			
+			clickedObject->rigidBody->setLinearVelocity(velocity - velocity * 0.1f);
+		}
+
 		clickedObject->rigidBody->activate();
-		clickedObject->rigidBody->applyCentralImpulse((topForce + rightForce) * -0.1f);
+		clickedObject->rigidBody->applyCentralImpulse(diff);
 	}
 }
 
@@ -128,7 +139,8 @@ int main(int argc, char* argv[]){
 		}
 		else if (clickedObject && !engine->io->MouseDown[0]) {
 			clickedObject->renderObject->color.z = 0.0f;
-			clickedObject = NULL;
+			clickedObject =  NULL;
+			mouseBodyAim =   NULL;
 		}
 	}
 
