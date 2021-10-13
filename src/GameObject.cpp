@@ -88,7 +88,9 @@ void GameObject::createRigidBody(float density) {
 	ms->setWorldTransform(t);
 
 	rigidBody = new btRigidBody(density, ms, bs, inertia);
-	rigidBody->setFriction(1.0f);
+	rigidBody->setFriction(0.5f);
+	rigidBody->setDamping(0.1f, 0.5f);
+
 	egn->dynamicsWorld->addRigidBody(rigidBody);
 
 	bs->setUserPointer((void*)this);

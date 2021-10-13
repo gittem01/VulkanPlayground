@@ -119,21 +119,24 @@ int main(int argc, char* argv[]){
 
 		world->stepSimulation(engine->io->DeltaTime);
 
-		if (engine->io->MouseDownDuration[0] >= 0.0f) {
-			mouseForce();
-		}
-		else if (clickedObject && !engine->io->MouseDown[0]) {
-			clickedObject->renderObject->color.z = 0.0f;
+		if (!engine->io->MouseDownOwned[0]) {
+			if (engine->io->MouseDownDuration[0] >= 0.0f) {
+				mouseForce();
+			}
+			else if (clickedObject && !engine->io->MouseDown[0]) {
+				clickedObject->renderObject->color.z = 0.0f;
 
-			if (mouseJoint)
-			{
-				clickedObject->rigidBody->activate();
-				world->removeConstraint(mouseJoint);
-				delete mouseJoint;
-				mouseJoint = NULL;
-				clickedObject = NULL;
+				if (mouseJoint)
+				{
+					clickedObject->rigidBody->activate();
+					world->removeConstraint(mouseJoint);
+					delete mouseJoint;
+					mouseJoint = NULL;
+					clickedObject = NULL;
+				}
 			}
 		}
+		
 		if (clickedObject) {
 			if (engine->io->KeysDownDuration[SDL_SCANCODE_Z] >= 0) {
 				clickDist -= 20.0f * engine->io->DeltaTime;
