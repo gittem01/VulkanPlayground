@@ -17,7 +17,7 @@ class GameObject {
 
 public:
 
-	void* engine;
+	void* physicsWorld;
 
 	RenderObject* renderObject;
 	glm::vec3 pos;
@@ -29,7 +29,7 @@ public:
 
 	btRigidBody* rigidBody;
 
-	GameObject(void* engine,
+	GameObject(void* physicsWorld,
 		glm::vec3 position = glm::vec3(),
 		glm::vec3 rotation = glm::vec3(),
 		glm::vec3 scale = glm::vec3(1, 1, 1)

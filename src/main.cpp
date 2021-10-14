@@ -9,7 +9,7 @@ float getRand01() {
 }
 
 void createObjects(){
-	GameObject* g = new GameObject(vkEngine,
+	GameObject* g = new GameObject(physicsWorld,
 		glm::vec3(0.0f, -10.0f, 0.0f),
 		glm::vec3(0.0f),
 		glm::vec3(50.0f, 1.0f, 50.0f));
@@ -18,7 +18,7 @@ void createObjects(){
 
 	int n = 100;
 	for (int i = 0; i < n; i++) {
-		g = new GameObject(vkEngine,
+		g = new GameObject(physicsWorld,
 			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f),
 			glm::vec3(0.0f),
 			glm::vec3(getRand01() + 0.3f, getRand01() + 0.3f, getRand01() + 0.3f));
@@ -27,13 +27,10 @@ void createObjects(){
 	}
 }
 
-
 int main(int argc, char* argv[]){
-
-	physicsWorld = new PhysicsWorld(NULL);
+	vkEngine = new VulkanEngine(1300, 700);
 	
-	vkEngine = new VulkanEngine(1300, 700, physicsWorld->world);
-	physicsWorld->engine = vkEngine;
+	physicsWorld = new PhysicsWorld(vkEngine);
 
 	vkEngine->get_mesh("../../assets/monkey_flat.obj", "monkey");
 	vkEngine->get_mesh("../../assets/box.obj", "box");

@@ -19,7 +19,6 @@
 #include "imgui.h"
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_vulkan.h"
-#include "btBulletDynamicsCommon.h"
 
 #include <iostream>
 #include <fstream>
@@ -140,10 +139,9 @@ public:
 
 	UploadContext _uploadContext;
 
-	btDiscreteDynamicsWorld* dynamicsWorld;
 	Camera3D* camera;
 
-	VulkanEngine(uint32_t width, uint32_t height, btDiscreteDynamicsWorld* dynamicsWorld=NULL);
+	VulkanEngine(uint32_t width, uint32_t height);
 	~VulkanEngine();
 
 	void get_mesh(std::string meshPath, const char* meshName);

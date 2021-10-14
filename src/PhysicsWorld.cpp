@@ -33,7 +33,7 @@ void PhysicsWorld::createPhysicsWorld(btVector3& gravity) {
 
 void PhysicsWorld::mouseHandle() {
 	if (!clickedObject) {
-		btCollisionWorld::ClosestRayResultCallback rayRes = engine->camera->rayToMouse();
+		btCollisionWorld::ClosestRayResultCallback rayRes = engine->camera->rayToMouse(world);
 		if (rayRes.hasHit()) {
 			bool flags = (rayRes.m_collisionObject->getCollisionFlags() & rayMasks) || (rayRes.m_collisionObject->getCollisionFlags() == 0);
 			if (flags) {

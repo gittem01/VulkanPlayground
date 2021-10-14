@@ -95,10 +95,10 @@ public:
 
 	glm::vec3 getRayDir(int x, int y); // screen pixel positions
 
-	btCollisionWorld::ClosestRayResultCallback& rayToCenter();
+	btCollisionWorld::ClosestRayResultCallback& rayToCenter(btDynamicsWorld* dynamicsWorld);
 
 	// rays to anywhere on the screen
-	btCollisionWorld::ClosestRayResultCallback& rayToPosition(glm::vec2 rayPos);
-	btCollisionWorld::ClosestRayResultCallback& rayToMouse();
+	btCollisionWorld::ClosestRayResultCallback& rayToPosition(glm::vec2 rayPos, btDynamicsWorld* dynamicsWorld);
+	btCollisionWorld::ClosestRayResultCallback& rayToMouse(btDynamicsWorld* dynamicsWorld);
 };
 

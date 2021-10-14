@@ -1,10 +1,10 @@
 #include "GameObject.h"
-#include "vk_engine.h"
+#include "PhysicsWorld.h"
 
-GameObject::GameObject(void* engine,
+GameObject::GameObject(void* physicsWorld,
 	glm::vec3 position, glm::vec3 rotation, glm::vec3 scale){
 
-	this->engine = engine;
+	this->physicsWorld = physicsWorld;
 
 	this->renderObject = NULL;
 	this->rigidBody = NULL;
@@ -15,7 +15,9 @@ GameObject::GameObject(void* engine,
 
 	reCalculateObjectMatrix();
 
-	((VulkanEngine*)engine)->gameObjects.push_back(this);
+	PhysicsWorld* pWorld = reinterpret_cast<PhysicsWorld*>(physicsWorld);
+
+	(((VulkanEngine*)pWorld->engine))->gameObjects.push_back(this);
 }
 
 
@@ -68,7 +70,7 @@ void GameObject::createRenderObject(char* meshName, char* materialName, char* te
 }
 
 void GameObject::createRigidBody(float density) {
-	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+	PhysicsWorld* pWorld = reinterpret_cast<PhysicsWorld*>(physicsWorld);
 
 	btBoxShape* bs = new btBoxShape(btVector3(scl.x, scl.y, scl.z));
 	
@@ -91,7 +93,7 @@ void GameObject::createRigidBody(float density) {
 	rigidBody->setFriction(0.5f);
 	rigidBody->setDamping(0.1f, 0.5f);
 
-	egn->dynamicsWorld->addRigidBody(rigidBody);
+	pWorld->world->addRigidBody(rigidBody);
 
 	bs->setUserPointer((void*)this);
 }
