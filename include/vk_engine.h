@@ -90,7 +90,6 @@ public:
 	std::unordered_map<std::string, Mesh> _meshes;
 
 	bool _isInitialized = false;
-	bool _isHeadless = false; // still testing...
 
 	SwapChain* _swapChain;
 
@@ -188,8 +187,4 @@ private:
 	void update_image_descriptors(Texture* tex);
 
 	void upload_mesh(Mesh& mesh);
-	void submitWork(VkCommandBuffer cmdBuffer, VkQueue queue);
-	uint32_t getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
-	void getImageData();
-	void saveImage(char* imageData, std::string imageName, VkExtent2D imageExtent, VkSubresourceLayout subResourceLayout);
 };

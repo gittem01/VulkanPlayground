@@ -32,11 +32,10 @@ public:
     std::vector<AllocatedImage>  headlessImages;
 
     void create();
-    void createHeadless();
     void destroy();
     void creationLoop();
 
-    void createFrameBuffers(); // need to be created after renderpass, hence seperate
+    void createFrameBuffers();
 
 private:
     void* engine;

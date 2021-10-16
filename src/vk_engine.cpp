@@ -27,14 +27,14 @@ bool VulkanEngine::looper()
 {
 	frameNumber += 1;
 
-	if (!_isHeadless) {
-		int res = eventHandler();
-		if (!res) return 1;
 
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame();
-		ImGui::NewFrame();
-	}
+	int res = eventHandler();
+	if (!res) return 1;
+
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL2_NewFrame();
+	ImGui::NewFrame();
+
 
 	// game update start
 
@@ -43,7 +43,7 @@ bool VulkanEngine::looper()
 	// game update end
 
 	ImDrawData* draw_data = NULL;
-	if (!_isHeadless) draw_data = imguiLoop();
+	imguiLoop();
 
 	render(draw_data);
 
@@ -58,11 +58,12 @@ ImDrawData* VulkanEngine::imguiLoop() {
 	camera->isAnyWindowHovered |= ImGui::IsWindowHovered();
 	
 	if (io->DeltaTime > 0.0f) {
-		ImGui::Text("FPS: %.1f", 1.0f / io->DeltaTime);
+		ImGui::Text("FPS: %.1f", io->Framerate);
 	}
 	else {
 		ImGui::Text("FPS: 0.0");
 	}
+	ImGui::Text("Delta Time: %.3fms", io->DeltaTime * 1000);
 
 	ImGui::Checkbox("camera keyboard movement smoothness", &camera->enableKeyPosSmth);
 	ImGui::Checkbox("camera rotation smoothness", &camera->enableRotSmth);
@@ -104,20 +105,17 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 
 	frameNumber = 0;
 
-	if (!_isHeadless) {
-		SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_VIDEO);
 
-		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
-		window = SDL_CreateWindow(
-			"Window",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			winExtent.width, winExtent.height,
-			window_flags
-		);
-	}
-	else window = NULL;
+	window = SDL_CreateWindow(
+		"Window",
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		winExtent.width, winExtent.height,
+		window_flags
+	);
 
 	camera = new Camera3D(glm::vec3(-20.0f, 20.0f, 20.0f), (void*)this);
 	camera->rot.x = glm::pi<float>() / 6.0f;
@@ -141,8 +139,7 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 
 	init_pipelines();
 
-	if (!_isHeadless) init_imgui();
-	else io = NULL;
+	init_imgui();
 
 	_isInitialized = true;
 }
@@ -262,14 +259,12 @@ void VulkanEngine::render(ImDrawData* draw_data)
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, UINT64_MAX));
 
 	VkResult result;
-	if (!_isHeadless) {
-		result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX,
-			get_current_frame()._presentSemaphore, NULL, &lastSwapchainImageIndex);
+	result = vkAcquireNextImageKHR(_device, _swapChain->swapChain, UINT64_MAX,
+		get_current_frame()._presentSemaphore, NULL, &lastSwapchainImageIndex);
 
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			windowResizeEvent();
-			return;
-		}
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		windowResizeEvent();
+		return;
 	}
 
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
@@ -299,11 +294,7 @@ void VulkanEngine::render(ImDrawData* draw_data)
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
 	rpInfo.renderArea.extent = winExtent;
-
-	if (!_isHeadless)
-		rpInfo.framebuffer = _swapChain->framebuffers[lastSwapchainImageIndex];
-	else
-		rpInfo.framebuffer = _swapChain->framebuffers[frameNumber % FRAME_OVERLAP];
+	rpInfo.framebuffer = _swapChain->framebuffers[lastSwapchainImageIndex];
 
 	rpInfo.clearValueCount = 2;
 	VkClearValue clearValues[] = { clearValue, depthClear };
@@ -325,37 +316,30 @@ void VulkanEngine::render(ImDrawData* draw_data)
 	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	submit.pWaitDstStageMask = &waitStage;
 
-	if (!_isHeadless) {
-		submit.waitSemaphoreCount = 1;
-		submit.pWaitSemaphores = &get_current_frame()._presentSemaphore;
+	submit.waitSemaphoreCount = 1;
+	submit.pWaitSemaphores = &get_current_frame()._presentSemaphore;
 
-		submit.signalSemaphoreCount = 1;
-		submit.pSignalSemaphores = &get_current_frame()._renderSemaphore;
-	}
+	submit.signalSemaphoreCount = 1;
+	submit.pSignalSemaphores = &get_current_frame()._renderSemaphore;
 
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
 
 	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
-	if (!_isHeadless) {
-		VkPresentInfoKHR presentInfo = {};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.pNext = NULL;
-		presentInfo.pSwapchains = &_swapChain->swapChain;
-		presentInfo.swapchainCount = 1;
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.pNext = NULL;
+	presentInfo.pSwapchains = &_swapChain->swapChain;
+	presentInfo.swapchainCount = 1;
 
-		presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
-		presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
+	presentInfo.waitSemaphoreCount = 1;
 
-		presentInfo.pImageIndices = &lastSwapchainImageIndex;
+	presentInfo.pImageIndices = &lastSwapchainImageIndex;
 
-		result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-			windowResizeEvent();
-		}
-	}
-	else {
-		getImageData();
+	result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		windowResizeEvent();
 	}
 }
 
@@ -444,7 +428,6 @@ void VulkanEngine::init_vulkan()
 	auto inst_ret = builder
 		.set_app_name("AppX")
 		.request_validation_layers(ENABLE_VALIDATION)
-		.set_headless(_isHeadless)
 		.require_api_version(1, 2, 0);
 
 #if ENABLE_VALIDATION
@@ -465,9 +448,7 @@ void VulkanEngine::init_vulkan()
 	_debug_messenger = NULL;
 #endif
 
-	if (!_isHeadless)
-		SDL_Vulkan_CreateSurface(window, _instance, &_surface);
-	else _surface = VK_NULL_HANDLE;
+	SDL_Vulkan_CreateSurface(window, _instance, &_surface);
 
 	VkPhysicalDeviceFeatures features = {};
 	features.fillModeNonSolid = VK_TRUE;
@@ -481,8 +462,7 @@ void VulkanEngine::init_vulkan()
 		.set_required_features(features)
 		.set_required_features_11(features11);
 
-	if (!_isHeadless)
-		selector = selector.set_surface(_surface);
+	selector = selector.set_surface(_surface);
 	vkb::PhysicalDevice physicalDevice = selector.select().value();
 
 	// .prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
@@ -537,16 +517,11 @@ void VulkanEngine::init_default_renderpass()
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	if (!_isHeadless) {
-		if (samples > VK_SAMPLE_COUNT_1_BIT) {
-			color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		}
-		else {
-			color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		}
+	if (samples > VK_SAMPLE_COUNT_1_BIT) {
+		color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	}
 	else {
-		color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	}
 
 	VkAttachmentReference color_attachment_ref = {};
@@ -576,12 +551,7 @@ void VulkanEngine::init_default_renderpass()
 	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	if (!_isHeadless) {
-		colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	}
-	else {
-		colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-	}
+	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 	VkAttachmentReference color_attachment_resolve_ref{};
 	color_attachment_resolve_ref.attachment = 2;
@@ -955,176 +925,6 @@ void VulkanEngine::endOneTimeSubmit(VkCommandBuffer cmdBuffer) {
 	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, true, UINT64_MAX);
 	vkResetFences(_device, 1, &_uploadContext._uploadFence);
 	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
-}
-
-void VulkanEngine::submitWork(VkCommandBuffer cmdBuffer, VkQueue queue) {
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &cmdBuffer;
-	VkFenceCreateInfo fenceInfo = {};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	VkFence fence;
-	vkCreateFence(_device, &fenceInfo, NULL, &fence);
-	vkQueueSubmit(queue, 1, &submitInfo, fence);
-	vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
-	vkDestroyFence(_device, fence, NULL);
-}
-
-uint32_t VulkanEngine::getMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) {
-	VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(_chosenGPU, &deviceMemoryProperties);
-	for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++) {
-		if ((typeBits & 1) == 1) {
-			if ((deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-				return i;
-			}
-		}
-		typeBits >>= 1;
-	}
-	return 0;
-}
-
-void VulkanEngine::getImageData() {
-	char* imageData = 0;
-
-	// Create the linear tiled destination image to copy to and to read the memory from
-	VkImageCreateInfo imgCreateInfo = {};
-	imgCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	imgCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-	imgCreateInfo.extent.width = winExtent.width;
-	imgCreateInfo.extent.height = winExtent.height;
-	imgCreateInfo.extent.depth = 1;
-	imgCreateInfo.arrayLayers = 1;
-	imgCreateInfo.mipLevels = 1;
-	imgCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	imgCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-	imgCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
-	imgCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-	VkImage dstImage;
-	vkCreateImage(_device, &imgCreateInfo, NULL, &dstImage);
-
-	VkMemoryRequirements memRequirements;
-	VkMemoryAllocateInfo memAllocInfo = {};
-	memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	VkDeviceMemory dstImageMemory;
-	vkGetImageMemoryRequirements(_device, dstImage, &memRequirements);
-	memAllocInfo.allocationSize = memRequirements.size;
-	// Memory must be host visible to copy from
-	memAllocInfo.memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	VK_CHECK(vkAllocateMemory(_device, &memAllocInfo, nullptr, &dstImageMemory));
-	VK_CHECK(vkBindImageMemory(_device, dstImage, dstImageMemory, 0));
-
-	// Do the actual blit from the offscreen image to our host visible destination image
-	VkCommandBufferAllocateInfo cmdBufAllocateInfo = vkinit::command_buffer_allocate_info(_frames[frameNumber % FRAME_OVERLAP]._commandPool,
-		1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-	VkCommandBuffer copyCmd;
-	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdBufAllocateInfo, &copyCmd));
-	VkCommandBufferBeginInfo cmdBufInfo = {};
-	cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	VK_CHECK(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
-
-	// Transition destination image to transfer destination layout
-	vkutil::insertImageMemoryBarrier(
-		copyCmd,
-		dstImage,
-		0,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-	);
-
-	VkImageCopy imageCopyRegion{};
-	imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	imageCopyRegion.srcSubresource.layerCount = 1;
-	imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	imageCopyRegion.dstSubresource.layerCount = 1;
-	imageCopyRegion.extent.width = winExtent.width;
-	imageCopyRegion.extent.height = winExtent.height;
-	imageCopyRegion.extent.depth = 1;
-
-	vkCmdCopyImage(
-		copyCmd,
-		_swapChain->headlessImages[frameNumber % FRAME_OVERLAP]._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-		dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1,
-		&imageCopyRegion
-	);
-
-	// Transition destination image to general layout, which is the required layout for mapping the image memory later on
-	vkutil::insertImageMemoryBarrier(
-		copyCmd,
-		dstImage,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_ACCESS_MEMORY_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_GENERAL,
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-	);
-
-	VK_CHECK(vkEndCommandBuffer(copyCmd));
-
-	submitWork(copyCmd, _graphicsQueue);
-
-	// Get layout of the image (including row pitch)
-	VkImageSubresource subResource{};
-	subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	VkSubresourceLayout subResourceLayout;
-
-	vkGetImageSubresourceLayout(_device, dstImage, &subResource, &subResourceLayout);
-
-	vkMapMemory(_device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imageData);
-	imageData += subResourceLayout.offset;
-
-	// save image to a ppm file
-	/*char buffer[5];
-	itoa(frameNumber, buffer, 10);
-	std::string imageName = std::string("headlessImage") + std::string(buffer) + std::string(".ppm");
-	saveImage(imageData, imageName, winExtent, subResourceLayout);
-	*/
-
-	printf("Frame: %d\n", frameNumber);
-
-	vkUnmapMemory(_device, dstImageMemory);
-	vkFreeMemory(_device, dstImageMemory, nullptr);
-	vkDestroyImage(_device, dstImage, nullptr);
-	vkFreeCommandBuffers(_device, _frames[frameNumber % FRAME_OVERLAP]._commandPool, 1, &copyCmd);
-}
-
-void VulkanEngine::saveImage(char* imageData, std::string imageName, VkExtent2D imageExtent, VkSubresourceLayout subResourceLayout) {
-	std::ofstream file(imageName, std::ios::out | std::ios::binary);
-
-	// ppm header
-	file << "P6\n" << winExtent.width << "\n" << winExtent.height << "\n" << 255 << "\n";
-
-	std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM };
-	const bool colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), VK_FORMAT_R8G8B8A8_UNORM) != formatsBGR.end());
-
-	// ppm binary pixel data
-	for (int32_t y = 0; y < imageExtent.height; y++) {
-		unsigned int* row = (unsigned int*)imageData;
-		for (int32_t x = 0; x < imageExtent.width; x++) {
-			if (colorSwizzle) {
-				file.write((char*)row + 2, 1);
-				file.write((char*)row + 1, 1);
-				file.write((char*)row, 1);
-			}
-			else {
-				file.write((char*)row, 3);
-			}
-			row++;
-		}
-		imageData += subResourceLayout.rowPitch;
-	}
-	file.close();
 }
 
 void VulkanEngine::init_imgui() {

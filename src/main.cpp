@@ -4,7 +4,7 @@ VulkanEngine* vkEngine = NULL;
 PhysicsWorld* physicsWorld = NULL;
 
 
-float getRand01() {
+double getRand01(){
 	return ((double)rand()) / RAND_MAX;
 }
 
@@ -28,7 +28,7 @@ void createObjects(){
 }
 
 int main(int argc, char* argv[]){
-	vkEngine = new VulkanEngine(1300, 700);
+	vkEngine = new VulkanEngine(1850, 950);
 	
 	physicsWorld = new PhysicsWorld(vkEngine);
 
