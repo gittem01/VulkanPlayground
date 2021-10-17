@@ -43,7 +43,7 @@ bool VulkanEngine::looper()
 	// game update end
 
 	ImDrawData* draw_data = NULL;
-	imguiLoop();
+	draw_data = imguiLoop();
 
 	render(draw_data);
 
