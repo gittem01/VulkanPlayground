@@ -16,6 +16,7 @@ public:
 	PhysicsWorld(VulkanEngine* engine);
 
 	void createPhysicsWorld(btVector3& gravity);
-	void mouseHandle();
+	void mouseClickHandle();
+	void mouseHoldHandle();
 	void loop();
 };

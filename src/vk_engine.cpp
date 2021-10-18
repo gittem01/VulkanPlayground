@@ -6,7 +6,7 @@
 
 #define ENABLE_VALIDATION 0
 
-#define VK_CHECK(x){												\
+#define VK_CHECK(x) {												\
 	VkResult err = x;												\
 	if (err)														\
 	{																\
@@ -23,10 +23,8 @@ VulkanEngine::~VulkanEngine() {
 	cleanup();
 }
 
-bool VulkanEngine::looper()
-{
+bool VulkanEngine::looper() {
 	frameNumber += 1;
-
 
 	int res = eventHandler();
 	if (!res) return 1;
@@ -34,7 +32,6 @@ bool VulkanEngine::looper()
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
-
 
 	// game update start
 
@@ -144,7 +141,7 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 	_isInitialized = true;
 }
 
-void VulkanEngine::windowResizeEvent(){
+void VulkanEngine::windowResizeEvent() {
 
 	vkDeviceWaitIdle(_device);
 
@@ -183,7 +180,7 @@ void VulkanEngine::windowResizeEvent(){
 	vkDeviceWaitIdle(_device);
 }
 
-void VulkanEngine::cleanup(){
+void VulkanEngine::cleanup() {
 	if (_isInitialized) {
 		vkDeviceWaitIdle(_device);
 
@@ -254,8 +251,7 @@ void VulkanEngine::cleanup(){
 FrameData& VulkanEngine::get_current_frame() { return _frames[frameNumber % FRAME_OVERLAP]; }
 
 
-void VulkanEngine::render(ImDrawData* draw_data)
-{
+void VulkanEngine::render(ImDrawData* draw_data) {
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, UINT64_MAX));
 
 	VkResult result;
@@ -343,8 +339,7 @@ void VulkanEngine::render(ImDrawData* draw_data)
 	}
 }
 
-void VulkanEngine::draw_objects(VkCommandBuffer cmd)
-{
+void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 	GPUCameraData camData;
 	camData.proj = camera->pers;
 	camData.view = camera->view;
@@ -421,8 +416,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd)
 	}
 }
 
-void VulkanEngine::init_vulkan()
-{
+void VulkanEngine::init_vulkan() {
 	vkb::InstanceBuilder builder;
 
 	auto inst_ret = builder
@@ -489,8 +483,7 @@ void VulkanEngine::init_vulkan()
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
 }
 
-void VulkanEngine::init_commands()
-{
+void VulkanEngine::init_commands() {
 	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily,
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
@@ -506,8 +499,7 @@ void VulkanEngine::init_commands()
 	}
 }
 
-void VulkanEngine::init_default_renderpass()
-{
+void VulkanEngine::init_default_renderpass() {
 	VkAttachmentDescription color_attachment = {};
 	color_attachment.format = _swapChain->swapchainImageFormat;
 	color_attachment.samples = samples;
@@ -580,8 +572,7 @@ void VulkanEngine::init_default_renderpass()
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, NULL, &_renderPass));
 }
 
-void VulkanEngine::init_sync_structures()
-{
+void VulkanEngine::init_sync_structures() {
 	VkFenceCreateInfo fenceCreateInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
 	VkSemaphoreCreateInfo semaphoreCreateInfo = vkinit::semaphore_create_info();
 
@@ -596,8 +587,7 @@ void VulkanEngine::init_sync_structures()
 	VK_CHECK(vkCreateFence(_device, &uploadFenceCreateInfo, NULL, &_uploadContext._uploadFence));
 }
 
-void VulkanEngine::init_descriptors()
-{
+void VulkanEngine::init_descriptors() {
 	const size_t worldParamBufferSize = FRAME_OVERLAP *
 		(pad_uniform_buffer_size(sizeof(GPUCameraData)) + pad_uniform_buffer_size(sizeof(GPUSceneData)));
 
@@ -694,8 +684,7 @@ void VulkanEngine::init_descriptors()
 		vkCreateDescriptorSetLayout(_device, &set3info, NULL, &_singleTextureSetLayout);
 	}
 
-	for (int i = 0; i < FRAME_OVERLAP; i++)
-	{
+	for (int i = 0; i < FRAME_OVERLAP; i++){
 		const int MAX_OBJECTS = 10000;
 		_frames[i].objectBuffer = create_buffer((sizeof(GPUObjectData)) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -721,8 +710,7 @@ void VulkanEngine::init_descriptors()
 	}
 }
 
-size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize)
-{
+size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize) {
 	// calculate required alignment based on minimum device offset alignment
 	size_t minUboAlignment = _GPUProperties.limits.minUniformBufferOffsetAlignment;
 	size_t alignedSize = originalSize;
@@ -799,8 +787,7 @@ void VulkanEngine::get_mesh(std::string meshPath, const char* meshName) {
 	_meshes[meshName] = m;
 }
 
-void VulkanEngine::upload_mesh(Mesh& mesh)
-{
+void VulkanEngine::upload_mesh(Mesh& mesh) {
 	const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
 	// allocate staging buffer
 	VkBufferCreateInfo stagingBufferInfo = {};
@@ -980,8 +967,7 @@ void VulkanEngine::init_imgui() {
 	style->Colors[ImGuiCol_WindowBg] = ImVec4(0, 0, 0, 0.95);
 }
 
-Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)
-{
+Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name) {
 	Material mat;
 	mat.pipeline = pipeline;
 	mat.pipelineLayout = layout;
@@ -989,8 +975,7 @@ Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout la
 	return &_materials[name];
 }
 
-Material* VulkanEngine::get_material(const std::string& name)
-{
+Material* VulkanEngine::get_material(const std::string& name) {
 	auto it = _materials.find(name);
 	if (it == _materials.end()) {
 		return NULL;
@@ -1000,8 +985,7 @@ Material* VulkanEngine::get_material(const std::string& name)
 	}
 }
 
-Mesh* VulkanEngine::get_mesh(const std::string& name)
-{
+Mesh* VulkanEngine::get_mesh(const std::string& name) {
 	auto it = _meshes.find(name);
 	if (it == _meshes.end()) {
 		return NULL;
