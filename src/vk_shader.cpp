@@ -26,6 +26,7 @@ VkShaderModule VulkanShader::load_shader_module(VkDevice device, const char* fil
 {
 	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 	if (!file.is_open()) {
+		printf("Could not find shader file: %s\n", filePath);
 		return NULL;
 	}
 

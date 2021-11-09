@@ -29,7 +29,7 @@ void createObjects(){
 
 int main(int argc, char* argv[]){
 	vkEngine = new VulkanEngine(1850, 950);
-	
+
 	physicsWorld = new PhysicsWorld(vkEngine);
 
 	vkEngine->get_mesh("../../assets/monkey_flat.obj", "monkey");

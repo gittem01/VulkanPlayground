@@ -48,7 +48,8 @@ target_link_libraries(VulkanPlayground SDL2-static)
 target_link_libraries(VulkanPlayground VulkanMemoryAllocator)
 target_link_libraries(VulkanPlayground vk-bootstrap)
 target_link_libraries(VulkanPlayground imgui)
-target_link_libraries(VulkanPlayground ${BULLET_LIBRARIES})
+target_link_libraries(VulkanPlayground 	BulletExampleBrowserLib Bullet3Common BulletSoftBody BulletDynamics BulletCollision BulletInverseDynamicsUtils
+										BulletInverseDynamics LinearMath)
 
 if (UNIX)
 	target_link_libraries(VulkanPlayground vulkanUnx)

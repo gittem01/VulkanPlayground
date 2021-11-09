@@ -156,7 +156,7 @@ public:
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
 	void draw_objects(VkCommandBuffer cmd);
-	VkCommandBuffer& beginOneTimeSubmit();
+	VkCommandBuffer beginOneTimeSubmit();
 	void endOneTimeSubmit(VkCommandBuffer cmdBuffer);
 	void setSamples();
 
