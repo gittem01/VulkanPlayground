@@ -282,14 +282,14 @@ glm::vec3 Camera3D::getRayDir(int x, int y) {
 	return aimDir;
 }
 
-btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToMouse(btDynamicsWorld* dynamicsWorld) {
+btCollisionWorld::ClosestRayResultCallback Camera3D::rayToMouse(btDynamicsWorld* dynamicsWorld) {
 	return rayToPosition(glm::vec2	(	reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.x, 
 										reinterpret_cast<VulkanEngine*>(engine)->io->MousePos.y),	
 										dynamicsWorld
 						);
 }
 
-btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToPosition(glm::vec2 rayPos, btDynamicsWorld* dynamicsWorld) {
+btCollisionWorld::ClosestRayResultCallback Camera3D::rayToPosition(glm::vec2 rayPos, btDynamicsWorld* dynamicsWorld) {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 
 	glm::vec3 aimDir = getRayDir((int)rayPos.x, (int)rayPos.y);
@@ -307,7 +307,7 @@ btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToPosition(glm::vec2 ra
 	return closestResult;
 }
 
-btCollisionWorld::ClosestRayResultCallback& Camera3D::rayToCenter(btDynamicsWorld* dynamicsWorld) {
+btCollisionWorld::ClosestRayResultCallback Camera3D::rayToCenter(btDynamicsWorld* dynamicsWorld) {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 	
 	btVector3 from(pos.x, pos.y, pos.z);

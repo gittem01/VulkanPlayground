@@ -9,7 +9,8 @@ PhysicsWorld::PhysicsWorld(VulkanEngine* engine) {
 
 	this->rayMasks = btCollisionObject::CF_DYNAMIC_OBJECT | btCollisionObject::CF_KINEMATIC_OBJECT;
 
-	createPhysicsWorld(btVector3(0, -9.8f, 0));
+	btVector3 v = btVector3(0, -9.8f, 0);
+	createPhysicsWorld(v);
 }
 
 void PhysicsWorld::createPhysicsWorld(btVector3& gravity) {

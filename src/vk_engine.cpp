@@ -721,9 +721,11 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize) {
 }
 
 void VulkanEngine::init_pipelines() {
+
 	PipelineBuilder pipelineBuilder;
 
-	std::vector<std::string> fileNames =	{	std::string("../../shaders/default.vert.spv"),
+	std::vector<std::string> fileNames =	{	
+												std::string("../../shaders/default.vert.spv"),
 												std::string("../../shaders/default.frag.spv")
 											};
 
@@ -761,18 +763,18 @@ void VulkanEngine::init_pipelines() {
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
 	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
-
+	
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
-
+	
 	VkDescriptorSetLayout setLayouts[] = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
 	mesh_pipeline_layout_info.setLayoutCount = sizeof(setLayouts) / sizeof(setLayouts[0]);
 	mesh_pipeline_layout_info.pSetLayouts = setLayouts;
 
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, NULL, &_defaultPipelineLayout));
-
+	
 	pipelineBuilder._pipelineLayout = _defaultPipelineLayout;
 	_defaultPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-
+	
 	create_material(_defaultPipeline, _defaultPipelineLayout, "defaultMaterial");
 }
 
@@ -892,7 +894,7 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 	return newBuffer;
 }
 
-VkCommandBuffer& VulkanEngine::beginOneTimeSubmit() {
+VkCommandBuffer VulkanEngine::beginOneTimeSubmit() {
 	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
 	VkCommandBuffer cmdBuffer;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &cmdBuffer));
@@ -958,7 +960,7 @@ void VulkanEngine::init_imgui() {
 	VkCommandBuffer commandBuffer = beginOneTimeSubmit();
 	ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
 	endOneTimeSubmit(commandBuffer);
-
+	
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	io = &ImGui::GetIO();

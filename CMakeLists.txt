@@ -5,7 +5,7 @@ project (VulkanPlayground)
 set (CMAKE_CXX_STANDARD 17)
 
 if (UNIX)
-	set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/debug)
+	set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 endif (UNIX)
 
 
@@ -48,7 +48,7 @@ target_link_libraries(VulkanPlayground SDL2-static)
 target_link_libraries(VulkanPlayground VulkanMemoryAllocator)
 target_link_libraries(VulkanPlayground vk-bootstrap)
 target_link_libraries(VulkanPlayground imgui)
-target_link_libraries(VulkanPlayground ${BULLET_LIBRARIES})
+target_link_libraries(VulkanPlayground  Bullet3Common BulletSoftBody BulletDynamics BulletCollision BulletInverseDynamics LinearMath)
 
 if (UNIX)
 	target_link_libraries(VulkanPlayground vulkanUnx)
