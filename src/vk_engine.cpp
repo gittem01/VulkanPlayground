@@ -356,7 +356,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 
 	_sceneParameters.sunlightDirection = { 1.0f, 0.5f, 0.0f, 1.0f };
 	_sceneParameters.sunlightColor = { 1.0f, 1.0f, 0.0f, 0.02f };
-	_sceneParameters.ambientColor = { 0.0f, 0.0f, 1.0f, 1.0f };
+	_sceneParameters.ambientColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 	_sceneParameters.fogColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 	char* sceneData;

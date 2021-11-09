@@ -18,8 +18,8 @@ layout(set = 0, binding = 1) uniform  SceneData{
 
 layout(set = 2, binding = 0) uniform sampler2D tex1;
 
-float ambientRatio = 0.10f;
-float brightness = 0.5f;
+float ambientRatio = 0.06f;
+float brightness = 0.50f;
 
 void main() 
 {	
