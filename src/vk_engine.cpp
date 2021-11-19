@@ -104,7 +104,7 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 
 	SDL_Init(SDL_INIT_VIDEO);
 
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
 	window = SDL_CreateWindow(
 		"Window",
@@ -422,7 +422,8 @@ void VulkanEngine::init_vulkan() {
 	auto inst_ret = builder
 		.set_app_name("AppX")
 		.request_validation_layers(ENABLE_VALIDATION)
-		.require_api_version(1, 2, 0);
+		.enable_extension("VK_MVK_macos_surface")
+		.require_api_version(1, 0, 0);
 
 #if ENABLE_VALIDATION
 	printf("Validation layers are enabled\n\n");
@@ -441,27 +442,29 @@ void VulkanEngine::init_vulkan() {
 #else
 	_debug_messenger = NULL;
 #endif
-
+	
 	SDL_Vulkan_CreateSurface(window, _instance, &_surface);
 
 	VkPhysicalDeviceFeatures features = {};
 	features.fillModeNonSolid = VK_TRUE;
+#ifndef __APPLE__
 	features.wideLines = VK_TRUE;
-
+#endif
 	VkPhysicalDeviceVulkan11Features features11 = {};
 	features11.shaderDrawParameters = VK_TRUE;
 
-	vkb::PhysicalDeviceSelector selector{ vkb_inst };
-	selector = selector.set_minimum_version(1, 2)
+	vkb::PhysicalDeviceSelector selector = vkb::PhysicalDeviceSelector(vkb_inst);
+	selector = selector.set_minimum_version(1, 0)
 		.set_required_features(features)
 		.set_required_features_11(features11);
-
+	
 	selector = selector.set_surface(_surface);
+
 	vkb::PhysicalDevice physicalDevice = selector.select().value();
 
 	// .prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
 
-	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+	vkb::DeviceBuilder deviceBuilder = vkb::DeviceBuilder(physicalDevice);
 
 	vkb::Device vkbDevice = deviceBuilder.build().value();
 
@@ -964,7 +967,7 @@ void VulkanEngine::init_imgui() {
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	io = &ImGui::GetIO();
-	
+
 	ImGuiStyle* style = &ImGui::GetStyle();
 	style->Colors[ImGuiCol_WindowBg] = ImVec4(0, 0, 0, 0.95);
 }
