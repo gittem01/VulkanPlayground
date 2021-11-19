@@ -76,8 +76,21 @@ ImDrawData* VulkanEngine::imguiLoop() {
 		ImGui::SameLine();
 		ImGui::SliderFloat(camera->strings[i], camera->values[i], 1.0f, 100.0f, "%.1f", 1.0f);
 	}
-	ImGui::PushItemWidth(0); // reset the width of upcoming items to default
 	
+	ImGui::PushItemWidth(120);
+	if (ImGui::BeginCombo("##combo", camera->cameraStrings[camera->cameraType])) {
+		for (int n = 0; n < sizeof(camera->cameraStrings) / sizeof(camera->cameraStrings[0]); n++) {
+			bool is_selected = (int)camera->cameraType == n;
+			if (ImGui::Selectable(camera->cameraStrings[n], is_selected))
+				camera->cameraType = (CameraTypes)n;
+			if (is_selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+
+		camera->isAnyWindowHovered = true;
+	}
+
 	ImGui::End();
 
 	ImGui::Render();

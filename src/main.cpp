@@ -28,7 +28,7 @@ void createObjects(){
 }
 
 int main(int argc, char* argv[]){
-	vkEngine = new VulkanEngine(1850, 950);
+	vkEngine = new VulkanEngine(1400, 750);
 
 	physicsWorld = new PhysicsWorld(vkEngine);
 

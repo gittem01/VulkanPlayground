@@ -10,13 +10,18 @@
 #define NUM_VALUES 4
 
 typedef enum CameraTypes {
-	WALKER = 1,
-	SURROUNDER = 2,
+	WALKER = 0,
+	SURROUNDER,
+	TRACKPAD,
+
+	ENUM_MAX,
 }CameraTypes;
 
 class Camera3D
 {
 public:
+	const char* cameraStrings[3] = { "WALKER", "SURROUNDER", "TRACKPAD" };
+
 	glm::vec3 pos;
 	glm::vec3 posAim;
 
@@ -79,6 +84,7 @@ public:
 	float limitZoom(float inZoom);
 	void rotateFunc();
 	void keyControl();
+	void trackpadControl();
 
 	// calculates the top and right vector according to lookDir
 	void calculateTopRight();

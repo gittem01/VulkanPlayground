@@ -37,14 +37,12 @@ Camera3D::Camera3D(glm::vec3 pos, void* engine) {
 	baseValues[3] = &zoomSpeed_b;
 }
 
-glm::mat4 Camera3D::getPers()
-{
+glm::mat4 Camera3D::getPers() {
 	return glm::perspective(glm::radians(zoom), 
 		(float)((VulkanEngine*)engine)->winExtent.width / (float)((VulkanEngine*)engine)->winExtent.height, 0.1f, 500.0f);
 }
 
-glm::mat4 Camera3D::getView(bool posIncl)
-{
+glm::mat4 Camera3D::getView(bool posIncl) {
 	if (posIncl) {
 		return glm::lookAt(this->pos, this->lookDir + this->pos, this->topVec);
 	}
@@ -53,14 +51,12 @@ glm::mat4 Camera3D::getView(bool posIncl)
 	}
 }
 
-void Camera3D::changeZoom(float inc)
-{
+void Camera3D::changeZoom(float inc) {
 	zoom += inc;
 	zoom = limitZoom(zoom);
 }
 
-float Camera3D::limitZoom(float inZoom)
-{
+float Camera3D::limitZoom(float inZoom) {
 	if (inZoom < zoomLimits.x) {
 		inZoom = zoomLimits.x;
 	}
@@ -81,7 +77,7 @@ void Camera3D::updateZoom() {
 		changeZoom(diff);
 		zoomAim -= diff;
 	}
-	else if (cameraType == SURROUNDER) {
+	else if (cameraType == SURROUNDER || (cameraType == TRACKPAD && egn->io->KeysDown[SDL_SCANCODE_LCTRL])) {
 		if (!isAnyWindowHovered && egn->io->MouseWheel != 0) {
 			posAim += lookDir * egn->io->MouseWheel * speedMult * wheelPosSpeed * 0.2f;
 		}
@@ -96,8 +92,7 @@ void Camera3D::calculateTopRight() {
 	realTopVec = glm::normalize(glm::cross(lookDir, rightVec));
 }
 
-void Camera3D::update()
-{
+void Camera3D::update() {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 
 	speedMult = BASE_MULT;
@@ -116,17 +111,14 @@ void Camera3D::update()
 	pers[1][1] *= -1;
 
 	if (egn->io && egn->io->KeysDownDuration[SDL_SCANCODE_TAB] == 0.0f) {
-		if (cameraType == SURROUNDER)
-			cameraType = WALKER;
-		else if (cameraType == WALKER)
-			cameraType = SURROUNDER;
+		cameraType = (CameraTypes)((int)cameraType + 1);
+		cameraType = (CameraTypes)((int)cameraType % ENUM_MAX);
 	}
 
 	isAnyWindowHovered = false;
 }
 
-glm::vec3 Camera3D::rotatePoint(glm::vec3 point, glm::vec3 rotAngles)
-{
+glm::vec3 Camera3D::rotatePoint(glm::vec3 point, glm::vec3 rotAngles) {
 	glm::mat4 rotator = glm::mat4(1.0f);
 
 	rotator = glm::rotate(rotator, rotAngles.x, glm::vec3(1, 0, 0));
@@ -138,8 +130,7 @@ glm::vec3 Camera3D::rotatePoint(glm::vec3 point, glm::vec3 rotAngles)
 	return glm::vec3(v);
 }
 
-glm::vec3 Camera3D::rotatePointArround(glm::vec3 point, glm::vec3 arroundPoint, glm::vec3 rotAngles)
-{
+glm::vec3 Camera3D::rotatePointArround(glm::vec3 point, glm::vec3 arroundPoint, glm::vec3 rotAngles) {
 	glm::vec3 diff = point - arroundPoint;
 	glm::mat4 rotator = glm::mat4(1.0f);
 
@@ -158,10 +149,14 @@ void Camera3D::updateLookDir() {
 	glm::vec3 lookDirection = glm::vec3(0, 0, -1);
 	lookDir = rotatePoint(lookDirection, this->rot);
 
-	if (cameraType == SURROUNDER) {
+	if (cameraType == SURROUNDER || cameraType == TRACKPAD) {
 		if (!egn->io->MouseDownOwned[2] && egn->io->MouseDown[2] && egn->io->KeysDown[SDL_SCANCODE_LALT]) {
-			posAim += rightVec * (egn->io->MouseDelta.x * 0.01f);
-			posAim += realTopVec * (egn->io->MouseDelta.y * 0.01f);
+			posAim += rightVec   * egn->io->MouseDelta.x * 0.01f;
+			posAim += realTopVec * egn->io->MouseDelta.y * 0.01f;
+		}
+		else if (cameraType == TRACKPAD && egn->io->KeysDown[SDL_SCANCODE_LALT]) {
+			posAim += -rightVec   * egn->io->MouseWheelH;
+			posAim += +realTopVec * egn->io->MouseWheel;
 		}
 		glm::vec3 diff = posAim * (wheelPosSmth * egn->io->DeltaTime * (float)enableWheelPosSmth + (1 - enableWheelPosSmth));
 		pos += diff;
@@ -169,13 +164,15 @@ void Camera3D::updateLookDir() {
 	}
 }
 
-void Camera3D::rotateFunc()
-{
+void Camera3D::rotateFunc() {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 
 	if (!egn->io->MouseDownOwned[2] && egn->io->MouseDown[2] && (!egn->io->KeysDown[SDL_SCANCODE_LALT] || cameraType == WALKER)) {
 		rotAim.x += egn->io->MouseDelta.y * rotSpeed * 0.0002f;
 		rotAim.y += egn->io->MouseDelta.x * rotSpeed * 0.0002f;
+	}
+	else if (cameraType == TRACKPAD) {
+		trackpadControl();
 	}
 
 	glm::vec3 diff = rotAim * (rotSmth * egn->io->DeltaTime * (float)enableRotSmth + (1 - enableRotSmth));
@@ -184,8 +181,7 @@ void Camera3D::rotateFunc()
 	controlRotation(&rot);
 }
 
-void Camera3D::updatePos()
-{
+void Camera3D::updatePos() {
 	updateLookDir();
 	calculateTopRight();
 	keyControl();
@@ -203,6 +199,19 @@ void Camera3D::keyControl() {
 
 	if (cameraType == WALKER) {
 		updateWlkrPos();
+	}
+}
+
+void Camera3D::trackpadControl() {
+	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
+
+	if (!egn->io->KeysDown[SDL_SCANCODE_LALT]) {
+		rotAim.x += +egn->io->MouseWheel * rotSpeed * 0.002f;
+		rotAim.y += -egn->io->MouseWheelH * rotSpeed * 0.002f;
+
+		glm::vec3 diff = rotAim * (rotSmth * egn->io->DeltaTime * (float)enableRotSmth + (1 - enableRotSmth));
+		rot += diff;
+		rotAim -= diff;
 	}
 }
 
@@ -257,7 +266,7 @@ void Camera3D::controlRotation(glm::vec3* rot) {
 	}
 }
 
-glm::vec3 Camera3D::getVectorAngle(glm::vec3 vec){
+glm::vec3 Camera3D::getVectorAngle(glm::vec3 vec) {
 	vec = glm::normalize(vec);
 
 	float angleY = asin(vec.x);
