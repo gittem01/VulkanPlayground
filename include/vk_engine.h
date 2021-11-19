@@ -91,6 +91,8 @@ public:
 
 	bool _isInitialized = false;
 
+	float dpiScaling = 1.0f;
+
 	SwapChain* _swapChain;
 
 	SDL_Window* window;

@@ -103,9 +103,6 @@ void Camera3D::update()
 	speedMult = BASE_MULT;
 
 	if (egn->window) {
-		int width, height;
-		SDL_GetWindowSize(egn->window, &width, &height);
-
 		updatePos();
 
 		updateZoom();
@@ -274,8 +271,7 @@ glm::vec3 Camera3D::getRayDir(int x, int y) {
 
 	// excluding camera position to get only the direction
 	glm::mat4 posExcldView = getView(false);
-
-	glm::vec4 viewport = glm::vec4(0, 0, egn->winExtent.width, egn->winExtent.height);
+	glm::vec4 viewport = glm::vec4(0, 0, egn->winExtent.width / egn->dpiScaling, egn->winExtent.height / egn->dpiScaling);
 	glm::vec3 screenPos = glm::vec3(x, y, 1.0f);
 	glm::vec3 aimDir = glm::normalize(glm::unProject(screenPos, posExcldView, pers, viewport));
 
