@@ -171,7 +171,7 @@ void Camera3D::rotateFunc() {
 		rotAim.x += egn->io->MouseDelta.y * rotSpeed * 0.0002f;
 		rotAim.y += egn->io->MouseDelta.x * rotSpeed * 0.0002f;
 	}
-	else if (cameraType == TRACKPAD) {
+	else if (cameraType == TRACKPAD && !egn->io->KeysDown[SDL_SCANCODE_LCTRL] && !egn->io->KeysDown[SDL_SCANCODE_LALT]) {
 		trackpadControl();
 	}
 
@@ -205,14 +205,12 @@ void Camera3D::keyControl() {
 void Camera3D::trackpadControl() {
 	VulkanEngine* egn = reinterpret_cast<VulkanEngine*>(engine);
 
-	if (!egn->io->KeysDown[SDL_SCANCODE_LALT]) {
-		rotAim.x += +egn->io->MouseWheel * rotSpeed * 0.002f;
-		rotAim.y += -egn->io->MouseWheelH * rotSpeed * 0.002f;
+	rotAim.x += +egn->io->MouseWheel * rotSpeed * 0.002f;
+	rotAim.y += -egn->io->MouseWheelH * rotSpeed * 0.002f;
 
-		glm::vec3 diff = rotAim * (rotSmth * egn->io->DeltaTime * (float)enableRotSmth + (1 - enableRotSmth));
-		rot += diff;
-		rotAim -= diff;
-	}
+	glm::vec3 diff = rotAim * (rotSmth * egn->io->DeltaTime * (float)enableRotSmth + (1 - enableRotSmth));
+	rot += diff;
+	rotAim -= diff;
 }
 
 void Camera3D::updateWlkrPos() {	
