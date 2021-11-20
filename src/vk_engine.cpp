@@ -102,7 +102,12 @@ int VulkanEngine::eventHandler() {
 	SDL_Event cEvent; // current event
 
 	while (SDL_PollEvent(&cEvent)) {
-		if (cEvent.type == SDL_QUIT) return 0;
+		// On some cases (ex macos) vulkan may think window is fine even though
+		// window is resized. This fixes that issue
+		if (cEvent.type == SDL_WINDOWEVENT && cEvent.window.event == SDL_WINDOWEVENT_RESIZED) {
+			windowResizeEvent();
+		}
+		else if (cEvent.type == SDL_QUIT) return 0;
 		ImGui_ImplSDL2_ProcessEvent(&cEvent);
 	}
 
