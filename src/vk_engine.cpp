@@ -49,9 +49,7 @@ bool VulkanEngine::looper() {
 
 ImDrawData* VulkanEngine::imguiLoop() {
 	ImGui::SetNextWindowPos(ImVec2(0, 0));
-	ImGui::SetNextWindowSize(ImVec2(450, winExtent.height)); // predefined numbers for now
-	ImGui::Begin("imgui window", NULL,
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+	ImGui::Begin("imgui window");
 	camera->isAnyWindowHovered |= ImGui::IsWindowHovered();
 	
 	if (io->DeltaTime > 0.0f) {
@@ -100,7 +98,6 @@ ImDrawData* VulkanEngine::imguiLoop() {
 
 int VulkanEngine::eventHandler() {
 	SDL_Event cEvent; // current event
-
 	while (SDL_PollEvent(&cEvent)) {
 		// On some cases (ex macos) vulkan may think window is fine even though
 		// window is resized. This fixes that issue
@@ -138,8 +135,8 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 
 	dpiScaling = x2 / x1;
 
-	camera = new Camera3D(glm::vec3(-20.0f, 20.0f, 20.0f), (void*)this);
-	camera->rot.x = glm::pi<float>() / 6.0f;
+	camera = new Camera3D(glm::vec3(-4.17, -6.62, 2.05), (void*)this);
+	camera->rot.x = glm::pi<float>() / 8.0f;
 	camera->rot.y = glm::pi<float>() / 4.0f;
 
 	init_vulkan();

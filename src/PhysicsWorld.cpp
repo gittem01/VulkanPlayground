@@ -70,11 +70,13 @@ void PhysicsWorld::mouseClickHandle() {
 
 void PhysicsWorld::loop() {
 	if (engine->io->KeysDown[SDL_SCANCODE_SPACE]) {
+		int multiplier = 1.0f;
+		if (engine->io->KeysDown[SDL_SCANCODE_LSHIFT]) multiplier *= -1;
 		for (int i = 0; i < world->getNonStaticRigidBodies().size(); i++) {
 			btRigidBody* rb = world->getNonStaticRigidBodies().at(i);
 			rb->activate();
 			btVector3 force = -rb->getCenterOfMassPosition();
-			rb->applyCentralImpulse(force * rb->getMass() * 0.05f);
+			rb->applyCentralImpulse(force * rb->getMass() * 0.05f * multiplier);
 		}
 	}
 

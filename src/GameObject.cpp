@@ -69,11 +69,11 @@ void GameObject::createRenderObject(char* meshName, char* materialName, char* te
 		glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)};
 }
 
-void GameObject::createRigidBody(float density) {
+void GameObject::createRigidBody_Box(float density) {
 	PhysicsWorld* pWorld = reinterpret_cast<PhysicsWorld*>(physicsWorld);
 
 	btBoxShape* bs = new btBoxShape(btVector3(scl.x, scl.y, scl.z));
-	
+
 	btVector3 inertia;
 	bs->calculateLocalInertia(density, inertia);
 	btDefaultMotionState* ms = new btDefaultMotionState();
@@ -96,4 +96,62 @@ void GameObject::createRigidBody(float density) {
 	pWorld->world->addRigidBody(rigidBody);
 
 	bs->setUserPointer((void*)this);
+}
+
+void GameObject::createRigidBody_Cylinder(float density) {
+	PhysicsWorld* pWorld = reinterpret_cast<PhysicsWorld*>(physicsWorld);
+
+	btCylinderShape* sh = new btCylinderShape(btVector3(scl.x, scl.y, scl.z));
+
+	btVector3 inertia;
+	sh->calculateLocalInertia(density, inertia);
+	btDefaultMotionState* ms = new btDefaultMotionState();
+	
+	btTransform t;
+	t.setIdentity();
+	t.setOrigin(btVector3(pos.x, pos.y, pos.z));
+
+	btQuaternion q;
+	q.setEulerZYX(rot.z, rot.y, rot.x);
+
+	t.setRotation(q);
+
+	ms->setWorldTransform(t);
+
+	rigidBody = new btRigidBody(density, ms, sh, inertia);
+	rigidBody->setFriction(0.5f);
+	rigidBody->setDamping(0.5f, 1.0f);
+
+	pWorld->world->addRigidBody(rigidBody);
+
+	sh->setUserPointer((void*)this);
+}
+
+void GameObject::createRigidBody_Sphere(float density) {
+	PhysicsWorld* pWorld = reinterpret_cast<PhysicsWorld*>(physicsWorld);
+
+	btSphereShape* sh = new btSphereShape(scl.x);
+
+	btVector3 inertia;
+	sh->calculateLocalInertia(density, inertia);
+	btDefaultMotionState* ms = new btDefaultMotionState();
+	
+	btTransform t;
+	t.setIdentity();
+	t.setOrigin(btVector3(pos.x, pos.y, pos.z));
+
+	btQuaternion q;
+	q.setEulerZYX(rot.z, rot.y, rot.x);
+
+	t.setRotation(q);
+
+	ms->setWorldTransform(t);
+
+	rigidBody = new btRigidBody(density, ms, sh, inertia);
+	rigidBody->setFriction(1.0f);
+	rigidBody->setDamping(0.0f, 0.0f);
+
+	pWorld->world->addRigidBody(rigidBody);
+
+	sh->setUserPointer((void*)this);
 }

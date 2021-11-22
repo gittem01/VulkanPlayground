@@ -39,8 +39,9 @@ public:
 
 	void createRenderObject(char* meshName, char* materialName = "defaultMaterial", char* textureName = "defaultTexture");
 
-	// box body
-	void createRigidBody(float density);
+	void createRigidBody_Box(float density = 1.0f);
+	void createRigidBody_Cylinder(float density = 1.0f);
+	void createRigidBody_Sphere(float density = 1.0f);
 
 private:
 

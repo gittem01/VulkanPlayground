@@ -193,9 +193,15 @@ void Camera3D::keyControl() {
 	if (egn->io->KeysDown[SDL_SCANCODE_LCTRL]) {
 		speedMult *= 5.0f;
 	}
+#ifndef __APPLE__
 	if (egn->io->KeysDown[SDL_SCANCODE_LSHIFT]) {
 		speedMult *= 0.2f;
 	}
+#else
+	if (egn->io->KeysDown[SDL_SCANCODE_LALT]) {
+		speedMult *= 0.2f;
+	}
+#endif
 
 	if (cameraType == WALKER) {
 		updateWlkrPos();
