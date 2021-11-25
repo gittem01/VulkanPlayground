@@ -10,19 +10,21 @@ double getRand01(){
 }
 
 void createObjects(){
-	GameObject* g = new GameObject(physicsWorld,
-		glm::vec3(0.0f, -10.0f, 0.0f),
-		glm::vec3(0.0f),
-		glm::vec3(500.0f, 1.0f, 500.0f));
-	g->createRenderObject("box");
-	g->createRigidBody_Box(0.0f);
+	// GameObject* g = new GameObject(physicsWorld,
+	// 	glm::vec3(0.0f, -10.0f, 0.0f),
+	// 	glm::vec3(0.0f),
+	// 	glm::vec3(500.0f, 1.0f, 500.0f));
+	// g->createRenderObject("box");
+	// g->createRigidBody_Box(0.0f);
 
-	int n = 250;
+	GameObject* g;
+
+	int n = 1000;
 	for (int i = 0; i < n; i++) {
 		g = new GameObject(physicsWorld,
-			glm::vec3((getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f, (getRand01() - 0.5f) * 15.0f),
+			glm::vec3((getRand01() - 0.5f), (getRand01() - 0.5f), (getRand01() - 0.5f)),
 			glm::vec3(0.0f),
-			glm::vec3(getRand01() * 2.0f + 0.3f, getRand01() * 2.0f + 0.3f, getRand01() * 2.0f + 0.3f));
+			glm::vec3(getRand01() * 0.2f + 0.03f, getRand01() * 0.2f + 0.03f, getRand01() * 0.2f + 0.03f));
 		g->createRenderObject("box");
 		g->createRigidBody_Box(1.0f);
 	}
@@ -35,7 +37,7 @@ int main(int argc, char* argv[]){
 
 	generateMaze("../../assets/maze.data", physicsWorld);
 
-	generateMazeVehicle(0.15f, physicsWorld);
+	generateMazeVehicle(0.1f, physicsWorld);
 
 	vkEngine->get_mesh("../../assets/monkey_flat.obj", "monkey");
 	vkEngine->get_mesh("../../assets/box.obj", "box");
@@ -49,6 +51,7 @@ int main(int argc, char* argv[]){
 
 	bool done = false;
 	while (!done) {
+		handleInput(vkEngine);
 		done = vkEngine->looper();
 		physicsWorld->loop();
 	}

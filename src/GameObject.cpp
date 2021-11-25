@@ -91,7 +91,7 @@ void GameObject::createRigidBody_Box(float density) {
 
 	rigidBody = new btRigidBody(density, ms, bs, inertia);
 	rigidBody->setFriction(0.5f);
-	rigidBody->setDamping(0.1f, 0.5f);
+	rigidBody->setDamping(0.3f, 1.0f);
 
 	pWorld->world->addRigidBody(rigidBody);
 
@@ -119,8 +119,8 @@ void GameObject::createRigidBody_Cylinder(float density) {
 	ms->setWorldTransform(t);
 
 	rigidBody = new btRigidBody(density, ms, sh, inertia);
-	rigidBody->setFriction(0.5f);
-	rigidBody->setDamping(0.5f, 1.0f);
+	rigidBody->setFriction(1.0f);
+	rigidBody->setDamping(0.0f, 0.0f);
 
 	pWorld->world->addRigidBody(rigidBody);
 

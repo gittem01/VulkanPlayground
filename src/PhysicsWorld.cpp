@@ -28,6 +28,8 @@ void PhysicsWorld::createPhysicsWorld(btVector3& gravity) {
 
 	world = new btDiscreteDynamicsWorld(dispatcher, broadphase, sol, collisionConfiguration);
 
+	world->getSolverInfo().m_numIterations = 100;
+
 	world->setGravity(gravity);
 }
 
