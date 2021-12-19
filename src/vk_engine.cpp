@@ -443,7 +443,9 @@ void VulkanEngine::init_vulkan() {
 	auto inst_ret = builder
 		.set_app_name("AppX")
 		.request_validation_layers(ENABLE_VALIDATION)
+#ifdef __APPLE__
 		.enable_extension("VK_MVK_macos_surface")
+#endif
 		.require_api_version(1, 0, 0);
 
 #if ENABLE_VALIDATION
