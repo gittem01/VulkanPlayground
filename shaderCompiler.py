@@ -1,18 +1,51 @@
 import pathlib
 import os
+import pwd
 import time
 from sys import platform, exit
 
-pathOfFile = os.path.dirname(os.path.abspath(__file__))
+COMPDIR_FILE = "compDir.save"
 
-if platform == "linux" or platform == "linux2":
-    compilerDir = "/usr/bin"
-    compilerExe = compilerDir + "/glslc"
-elif platform == "win32":
-    compilerDir = "C:/VulkanSDK/1.2.189.2/Bin"
-    compilerExe = compilerDir + "/glslc.exe"
-else:
-    exit("only tested for linux and windows")
+def getUsername():
+    return pwd.getpwuid(os.getuid())[0]
+
+def findConsistingInFolder(folder, searchKey):
+    for root, _, files in os.walk(folder):
+        for f in files:
+            if f.find(searchKey) == 0:
+                return root + "/" + f
+
+def getCompilerExe():
+    try:
+        f = open(COMPDIR_FILE, "r")
+        compDir = f.read()
+        f.close()
+        print(f"Found compiler dir : {compDir}\n")
+        return compDir
+
+    except FileNotFoundError:
+        print("Could not find compiler specifier file will search for it now\n")
+        if platform == "darwin":
+            searchPath = f"/Users/{getUsername()}/VulkanSDK"
+            compDir = findConsistingInFolder(searchPath, "glslc")
+        elif platform == "linux" or platform == "linux2":
+            compDir = "/usr/bin/glslc"
+        elif platform == "win32":
+            searchPath = "C:/VulkanSDK"
+            compDir = findConsistingInFolder(searchPath, "glslc")
+        else:
+            exit("Could not recognize the platform")
+
+        print(f"Found compiler dir : {compDir}\n")
+        f = open(COMPDIR_FILE, "w")
+        f.write(compDir)
+        f.close()
+
+        return compDir;
+
+compilerExe = getCompilerExe()
+
+pathOfFile = os.path.dirname(os.path.abspath(__file__))
 
 shaderFolders = ["shaders"] # folders to check for shader files
 
