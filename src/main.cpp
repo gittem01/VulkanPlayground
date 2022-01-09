@@ -17,9 +17,9 @@ void createObjects(){
 	g->createRigidBody_Box(0.0f);
 	g->renderObject->color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 
-	float scaling = 2.0f;
+	float scaling = 4.0f;
 
-	int n = 500;
+	int n = 200;
 	for (int i = 0; i < n; i++) {
 		g = new GameObject(physicsWorld,
 			glm::vec3((getRand01() - 0.5f), (getRand01() - 0.5f), (getRand01() - 0.5f)) * scaling * 5.0f,

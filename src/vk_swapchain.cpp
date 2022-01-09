@@ -53,7 +53,6 @@ void SwapChain::creationLoop() {
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     for (;;) {
-        printf("here\n");
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
         VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
         if (extent.width > 0 && extent.height > 0) {
@@ -126,7 +125,7 @@ void SwapChain::createColorResources() {
     };
 
     VkImageCreateInfo cimg_info;
-    cimg_info  = vkinit::image_create_info(swapchainImageFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, colorImageExtent, vulkanEngine->samples);
+    cimg_info = vkinit::image_create_info(swapchainImageFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, colorImageExtent, vulkanEngine->samples);
 
     VmaAllocationCreateInfo cimg_allocinfo = {};
     cimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;

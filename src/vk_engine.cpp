@@ -373,19 +373,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 	int frameIndex = frameNumber % FRAME_OVERLAP;
 	data += fullSize * frameIndex;
 	memcpy(data, &camData, sizeof(GPUCameraData));
-	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
 
 	_sceneParameters.sunlightDirection = { 1.0f, 0.5f, 0.0f, 1.0f };
 	_sceneParameters.sunlightColor = { 1.0f, 1.0f, 1.0f, 0.02f };
 	_sceneParameters.ambientColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 	_sceneParameters.fogColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	char* sceneData;
-	vmaMapMemory(_allocator, _worldBuffers._allocation , (void**)&sceneData);
-	frameIndex = frameNumber % FRAME_OVERLAP;
-	sceneData += 	fullSize * frameIndex +
-					pad_uniform_buffer_size(sizeof(GPUCameraData));
-	memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
+	data += pad_uniform_buffer_size(sizeof(GPUCameraData));
+	memcpy(data, &_sceneParameters, sizeof(GPUSceneData));
 	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
 
 	GPUObjectData* objectData;
@@ -508,11 +503,11 @@ void VulkanEngine::init_vulkan() {
 }
 
 void VulkanEngine::init_commands() {
-	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily,
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
 	VkCommandPoolCreateInfo uploadCommandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily);
 	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, NULL, &_uploadContext._commandPool));
+
+	VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily,
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 	for (int i = 0; i < FRAME_OVERLAP; i++) {
 		VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, NULL, &_frames[i]._commandPool));
@@ -559,6 +554,7 @@ void VulkanEngine::init_default_renderpass() {
 	depth_attachment_ref.attachment = 1;
 	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+	// may not need to be created but still easier to read this way
 	VkAttachmentDescription colorAttachmentResolve{};
 	colorAttachmentResolve.format = _swapChain->swapchainImageFormat;
 	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
