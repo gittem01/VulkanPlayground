@@ -32,10 +32,8 @@ void GameObject::reCalculateObjectMatrix() {
 		if (rigidBody->getMass() > 0) {
 			if (!rigidBody->isActive()) {
 				renderObject->color.y = 0.0f;
-				renderObject->color.x = 1.0f;
 			}
 			else {
-				renderObject->color.x = 0.0f;
 				renderObject->color.y = 1.0f;
 			}
 		}
@@ -91,7 +89,7 @@ void GameObject::createRigidBody_Box(float density) {
 
 	rigidBody = new btRigidBody(density, ms, bs, inertia);
 	rigidBody->setFriction(0.5f);
-	rigidBody->setDamping(0.3f, 1.0f);
+	rigidBody->setDamping(0.2f, 0.2f);
 
 	pWorld->world->addRigidBody(rigidBody);
 

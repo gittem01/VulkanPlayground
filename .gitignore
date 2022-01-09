@@ -3,3 +3,4 @@ build/
 .vs/
 .vscode/
 .ds_store
+compDir.save

@@ -135,8 +135,8 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 
 	dpiScaling = x2 / x1;
 
-	camera = new Camera3D(glm::vec3(-4.17, -6.62, 2.05), (void*)this);
-	camera->rot.x = glm::pi<float>() / 8.0f;
+	camera = new Camera3D(glm::vec3(-10.0f, 10.0f, 10.0f), (void*)this);
+	camera->rot.x = glm::pi<float>() / 4.0f;
 	camera->rot.y = glm::pi<float>() / 4.0f;
 
 	init_vulkan();
@@ -376,7 +376,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
 
 	_sceneParameters.sunlightDirection = { 1.0f, 0.5f, 0.0f, 1.0f };
-	_sceneParameters.sunlightColor = { 1.0f, 1.0f, 0.0f, 0.02f };
+	_sceneParameters.sunlightColor = { 1.0f, 1.0f, 1.0f, 0.02f };
 	_sceneParameters.ambientColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 	_sceneParameters.fogColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 
@@ -446,7 +446,7 @@ void VulkanEngine::init_vulkan() {
 #ifdef __APPLE__
 		.enable_extension("VK_MVK_macos_surface")
 #endif
-		.require_api_version(1, 0, 0);
+		.require_api_version(1, 2, 0);
 
 #if ENABLE_VALIDATION
 	printf("Validation layers are enabled\n\n");
@@ -496,8 +496,6 @@ void VulkanEngine::init_vulkan() {
 
 	vkGetPhysicalDeviceProperties(_chosenGPU, &_GPUProperties);
 	std::cout << "Selected GPU: " << _GPUProperties.deviceName << "\n\n";
-	std::cout << "The GPU has a minimum buffer alignment of " <<
-	_GPUProperties.limits.minUniformBufferOffsetAlignment << "\n\n";
 
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();

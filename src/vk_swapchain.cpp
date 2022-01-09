@@ -5,8 +5,6 @@ SwapChain::SwapChain(void* engine){
 
     this->engine = engine;
 
-    VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
-
     create();
 }
 
@@ -55,6 +53,7 @@ void SwapChain::creationLoop() {
     VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
 
     for (;;) {
+        printf("here\n");
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanEngine->_chosenGPU);
         VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
         if (extent.width > 0 && extent.height > 0) {

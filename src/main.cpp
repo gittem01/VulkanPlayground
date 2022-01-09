@@ -1,5 +1,4 @@
 #include "PhysicsWorld.h"
-#include "mazeGeneration.h"
 
 VulkanEngine* vkEngine = NULL;
 PhysicsWorld* physicsWorld = NULL;
@@ -10,23 +9,25 @@ double getRand01(){
 }
 
 void createObjects(){
-	// GameObject* g = new GameObject(physicsWorld,
-	// 	glm::vec3(0.0f, -10.0f, 0.0f),
-	// 	glm::vec3(0.0f),
-	// 	glm::vec3(500.0f, 1.0f, 500.0f));
-	// g->createRenderObject("box");
-	// g->createRigidBody_Box(0.0f);
+	GameObject* g = new GameObject(physicsWorld,
+		glm::vec3(0.0f, -10.0f, 0.0f),
+		glm::vec3(0.0f),
+		glm::vec3(500.0f, 1.0f, 500.0f));
+	g->createRenderObject("box");
+	g->createRigidBody_Box(0.0f);
+	g->renderObject->color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 
-	GameObject* g;
+	float scaling = 2.0f;
 
-	int n = 1000;
+	int n = 500;
 	for (int i = 0; i < n; i++) {
 		g = new GameObject(physicsWorld,
-			glm::vec3((getRand01() - 0.5f), (getRand01() - 0.5f), (getRand01() - 0.5f)),
+			glm::vec3((getRand01() - 0.5f), (getRand01() - 0.5f), (getRand01() - 0.5f)) * scaling * 5.0f,
 			glm::vec3(0.0f),
-			glm::vec3(getRand01() * 0.2f + 0.03f, getRand01() * 0.2f + 0.03f, getRand01() * 0.2f + 0.03f));
+			glm::vec3(getRand01() * 0.2f + 0.1f, getRand01() * 0.2f + 0.1f, getRand01() * 0.2f + 0.03f) * scaling);
 		g->createRenderObject("box");
 		g->createRigidBody_Box(1.0f);
+		g->renderObject->color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 }
 
@@ -34,10 +35,6 @@ int main(int argc, char* argv[]){
 	vkEngine = new VulkanEngine(1400, 750);
 
 	physicsWorld = new PhysicsWorld(vkEngine);
-
-	generateMaze("../../assets/maze.data", physicsWorld);
-
-	generateMazeVehicle(0.1f, physicsWorld);
 
 	vkEngine->get_mesh("../../assets/monkey_flat.obj", "monkey");
 	vkEngine->get_mesh("../../assets/box.obj", "box");
@@ -47,11 +44,10 @@ int main(int argc, char* argv[]){
 	vkEngine->get_image("../../assets/monkey.png", "monkey");
 	vkEngine->get_image("../../assets/defaultTexture.png", "defaultTexture");
 
-	//createObjects();
+	createObjects();
 
 	bool done = false;
 	while (!done) {
-		handleInput(vkEngine);
 		done = vkEngine->looper();
 		physicsWorld->loop();
 	}

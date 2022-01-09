@@ -52,7 +52,7 @@ void PhysicsWorld::mouseClickHandle() {
 		if (flags) {
 			clickedObject = (GameObject*)rayRes.m_collisionObject->getCollisionShape()->getUserPointer();
 			rayRes.m_collisionObject->getCollisionFlags();
-			clickedObject->renderObject->color.z = 1.0f;
+			clickedObject->renderObject->color.z = 0.0f;
 
 			btVector3 hitPoint = rayRes.m_hitPointWorld;
 
@@ -93,7 +93,7 @@ void PhysicsWorld::loop() {
 		}
 		
 		else if (clickedObject && !engine->io->MouseDown[0]) {
-			clickedObject->renderObject->color.z = 0.0f;
+			clickedObject->renderObject->color.z = 1.0f;
 
 			if (mouseJoint)
 			{
@@ -115,7 +115,7 @@ void PhysicsWorld::loop() {
 			clickDist += 20.0f * engine->io->DeltaTime;
 		}
 		if (engine->io->MouseDownDuration[1] == 0.0f) {
-			clickedObject->renderObject->color.z = 0.0f;
+			clickedObject->renderObject->color.z = 1.0f;
 			clickedObject = NULL;
 			mouseJoint = NULL;
 		}
