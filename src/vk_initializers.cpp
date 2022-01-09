@@ -69,8 +69,11 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 	info.rasterizerDiscardEnable = VK_FALSE;
 	
 	info.polygonMode = polygonMode;
-	info.lineWidth = 2.0f;
-	
+	if (polygonMode == VK_POLYGON_MODE_LINE)
+		info.lineWidth = 2.0f;
+	else
+		info.lineWidth = 1.0f;
+
 	info.cullMode = VK_CULL_MODE_FRONT_BIT;
 	info.frontFace = VK_FRONT_FACE_CLOCKWISE;
 

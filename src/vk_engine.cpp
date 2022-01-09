@@ -469,9 +469,9 @@ void VulkanEngine::init_vulkan() {
 	SDL_Vulkan_CreateSurface(window, _instance, &_surface);
 
 	VkPhysicalDeviceFeatures features = {};
-	features.fillModeNonSolid = VK_TRUE;
 #ifndef __APPLE__
 	features.wideLines = VK_TRUE;
+	features.fillModeNonSolid = VK_TRUE;
 #endif
 	VkPhysicalDeviceVulkan11Features features11 = {};
 	features11.shaderDrawParameters = VK_TRUE;
