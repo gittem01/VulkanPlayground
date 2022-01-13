@@ -26,9 +26,10 @@
 #include <deque>
 #include <functional>
 #include <unordered_map>
+#include <vector>
 #include <math.h>
 
-constexpr unsigned int FRAME_OVERLAP = 1;
+constexpr unsigned int FRAME_OVERLAP = 2;
 
 struct UploadContext {
 	VkFence _uploadFence;
@@ -41,12 +42,19 @@ struct GPUObjectData{
 	glm::vec4 objectColor;
 };
 
+struct LightData{
+	glm::vec4 position;
+	glm::vec4 color;
+	glm::vec4 strength;
+};
+
 struct GPUSceneData {
 	glm::vec4 fogColor; // w for exponent
 	glm::vec4 fogDistances; // x for min, y for max, zw unused.
 	glm::vec4 ambientColor;
 	glm::vec4 sunlightDirection; // w for sun power
 	glm::vec4 sunlightColor;
+	int numOflights[4];
 };
 
 struct GPUCameraData {
@@ -88,6 +96,8 @@ public:
 	std::unordered_map<std::string, Texture> _loadedTextures;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
+
+	std::vector<LightData> lights;
 
 	bool _isInitialized = false;
 
@@ -176,6 +186,9 @@ public:
 	bool looper();
 
 private:
+	const int MAX_OBJECTS = 10000;
+	const int MAX_LIGHTS = 100;
+
 	void windowResizeEvent();
 	int eventHandler();
 

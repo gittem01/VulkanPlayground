@@ -42,8 +42,4 @@ public:
 	void createRigidBody_Box(float density = 1.0f);
 	void createRigidBody_Cylinder(float density = 1.0f);
 	void createRigidBody_Sphere(float density = 1.0f);
-
-private:
-
-
 };

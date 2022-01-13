@@ -13,7 +13,7 @@ void createObjects(){
 		glm::vec3(0.0f, -10.0f, 0.0f),
 		glm::vec3(0.0f),
 		glm::vec3(500.0f, 1.0f, 500.0f));
-	g->createRenderObject("box");
+	g->createRenderObject("box", "defaultMaterial", "defaultTexture");
 	g->createRigidBody_Box(0.0f);
 	g->renderObject->color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 
@@ -25,8 +25,23 @@ void createObjects(){
 			glm::vec3((getRand01() - 0.5f), (getRand01() - 0.5f), (getRand01() - 0.5f)) * scaling * 5.0f,
 			glm::vec3(0.0f),
 			glm::vec3(getRand01() * 0.2f + 0.1f, getRand01() * 0.2f + 0.1f, getRand01() * 0.2f + 0.03f) * scaling);
-		g->createRenderObject("box");
-		g->createRigidBody_Box(1.0f);
+		int randNum = rand() % 3;
+		if (randNum == 0){
+			g->createRenderObject("box");
+			g->createRigidBody_Box(1.0f);
+		}
+		else if (randNum == 1){
+			g->createRenderObject("sphere");
+			g->scl = glm::vec3(g->scl.x);
+			g->createRigidBody_Sphere(1.0f);
+		}
+
+		else if (randNum == 2){
+			g->createRenderObject("cylinder");
+			g->scl = glm::vec3(g->scl.x);
+			g->createRigidBody_Cylinder(1.0f);
+		}
+		
 		g->renderObject->color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 }

@@ -4,7 +4,7 @@
 #include "vk_engine.h"
 #include <string>
 
-#define ENABLE_VALIDATION 0
+#define ENABLE_VALIDATION 1
 
 #define VK_CHECK(x) {												\
 	VkResult err = x;												\
@@ -17,6 +17,22 @@
 
 VulkanEngine::VulkanEngine(uint32_t width, uint32_t height) {
 	init(width, height);
+
+	int numOfLights = 5;
+	lights.resize(numOfLights);
+	srand(101);
+	for (int i = 0; i < numOfLights; i++){
+		lights.at(i).position = glm::vec4(rand() % 30 - 15, 5.0f, rand() % 30 - 15, 1.0f);
+		lights.at(i).strength = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		
+		int randNum = rand() % 3;
+		if (randNum == 0)
+			lights.at(i).color = glm::vec4(1, 0, 0, 1.0f);
+		else if (randNum == 1)
+			lights.at(i).color = glm::vec4(0, 1, 0, 1.0f);
+		else if (randNum == 2)
+			lights.at(i).color = glm::vec4(0, 0, 1, 1.0f);
+	}
 }
 
 VulkanEngine::~VulkanEngine() {
@@ -378,13 +394,17 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 	_sceneParameters.sunlightColor = { 1.0f, 1.0f, 1.0f, 0.02f };
 	_sceneParameters.ambientColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 	_sceneParameters.fogColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	_sceneParameters.numOflights[0] = lights.size();
 
 	data += pad_uniform_buffer_size(sizeof(GPUCameraData));
 	memcpy(data, &_sceneParameters, sizeof(GPUSceneData));
 	vmaUnmapMemory(_allocator, _worldBuffers._allocation);
 
 	GPUObjectData* objectData;
+	char* baseObjectData;
 	vmaMapMemory(_allocator, get_current_frame().objectBuffer._allocation, (void**)&objectData);
+
+	baseObjectData = (char*)objectData;
 
 	for (int i = 0; i < gameObjects.size(); i++)
 	{
@@ -395,29 +415,48 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 		objectData[i].objectColor = object->color;
 	}
 
+	LightData* lightData = (LightData*)(baseObjectData + pad_uniform_buffer_size(sizeof(GPUObjectData) * 10000));
+
+	for (int i = 0; i < lights.size(); i++)
+	{
+		float angle = atan2(lights[i].position.x, lights[i].position.z);
+		float length = glm::length(glm::vec2(lights[i].position.x, lights[i].position.z));
+		lights[i].position.x = length * sin(angle + 0.01f);
+		lights[i].position.z = length * cos(angle + 0.01f);
+		lightData[i].position = lights[i].position;
+		lightData[i].color = lights[i].color;
+		lightData[i].strength = lights[i].strength;
+	}
+
 	vmaUnmapMemory(_allocator, get_current_frame().objectBuffer._allocation);
 
 	std::string lastMesh = std::string();
 	std::string lastMaterial = std::string();
+	std::string lastTexture = std::string();
 	for (int i = 0; i < gameObjects.size(); i++)
 	{
 		RenderObject* object = gameObjects.at(i)->renderObject;
 		Mesh& mesh = _meshes[object->meshName];
 
-		if (object->materialName != lastMaterial) {
+		if (object->materialName != lastMaterial || lastTexture != object->textureName) {
 			Material& material = _materials[object->materialName];
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
 			lastMaterial = object->materialName;
+			lastTexture = object->textureName;
 
 			uint32_t uniform_offset1 = fullSize * frameIndex;
 			uint32_t uniform_offset2 = uniform_offset1 + pad_uniform_buffer_size(sizeof(GPUCameraData));
 			uint32_t uniform_offsets[] = { uniform_offset1, uniform_offset2 };
 
+			uint32_t obj_uniform_offset1 = 0;
+			uint32_t obj_uniform_offset2 = pad_uniform_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS);
+			uint32_t obj_uniform_offsets[] = { obj_uniform_offset1, obj_uniform_offset2 };
+
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
 				0, 1, &_globalDescriptor,								2, uniform_offsets);
 
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
-				1, 1, &get_current_frame().objectDescriptor,			0, NULL);
+				1, 1, &get_current_frame().objectDescriptor,			2, obj_uniform_offsets);
 
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
 				2, 1, &_loadedTextures[object->textureName].textureSet,	0, NULL);
@@ -619,6 +658,7 @@ void VulkanEngine::init_descriptors() {
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 10 },
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 },
 	};
 
@@ -679,15 +719,19 @@ void VulkanEngine::init_descriptors() {
 	vkUpdateDescriptorSets(_device, 2, sets, 0, NULL);
 
 	{ // set 2
-		VkDescriptorSetLayoutBinding objectBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VkDescriptorSetLayoutBinding objectBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
 			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
+		VkDescriptorSetLayoutBinding lightBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 
+			VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+
+		VkDescriptorSetLayoutBinding binds[2] = {objectBind, lightBind};
 
 		VkDescriptorSetLayoutCreateInfo set2info = {};
 		set2info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		set2info.pNext = NULL;
-		set2info.bindingCount = 1;
 		set2info.flags = 0;
-		set2info.pBindings = &objectBind;
+		set2info.bindingCount = 2;
+		set2info.pBindings = binds;
 		vkCreateDescriptorSetLayout(_device, &set2info, NULL, &_objectSetLayout);
 	}
 
@@ -705,12 +749,12 @@ void VulkanEngine::init_descriptors() {
 	}
 
 	for (int i = 0; i < FRAME_OVERLAP; i++){
-		const int MAX_OBJECTS = 10000;
-		_frames[i].objectBuffer = create_buffer((sizeof(GPUObjectData)) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			VMA_MEMORY_USAGE_CPU_TO_GPU);
+		_frames[i].objectBuffer = create_buffer(pad_uniform_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS) +
+												pad_uniform_buffer_size(sizeof(LightData) * MAX_LIGHTS),
+												VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+												VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		VkDescriptorSetAllocateInfo objectSetAlloc = {};
-		objectSetAlloc.pNext = NULL;
 		objectSetAlloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		objectSetAlloc.descriptorPool = _descriptorPool;
 		objectSetAlloc.descriptorSetCount = 1;
@@ -723,10 +767,20 @@ void VulkanEngine::init_descriptors() {
 		objectBufferInfo.offset = 0;
 		objectBufferInfo.range = sizeof(GPUObjectData) * MAX_OBJECTS;
 
-		VkWriteDescriptorSet objectWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VkDescriptorBufferInfo lightBufferInfo;
+		lightBufferInfo.buffer = _frames[i].objectBuffer._buffer;
+		lightBufferInfo.offset = 0;
+		lightBufferInfo.range = sizeof(LightData) * MAX_LIGHTS;
+
+		VkWriteDescriptorSet objectWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
 			_frames[i].objectDescriptor, &objectBufferInfo, 0);
 
-		vkUpdateDescriptorSets(_device, 1, &objectWrite, 0, NULL);
+		VkWriteDescriptorSet lightWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+			_frames[i].objectDescriptor, &lightBufferInfo, 1);
+
+		VkWriteDescriptorSet sets[] = { objectWrite, lightWrite };
+
+		vkUpdateDescriptorSets(_device, 2, sets, 0, NULL);
 	}
 }
 
