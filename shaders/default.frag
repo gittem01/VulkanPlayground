@@ -52,7 +52,8 @@ void main()
 		vec3 lightDirection = fragWorldPos - lightBuffer.lights[i].position.xyz;
 		float dist = length(lightDirection);
 		vec3 reflectDir = normalize(reflect(lightDirection, nNormal));
-		float pointColor = pow(max(dot(normal, reflectDir), 0.0), 2);
+		float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+		float pointColor = spec + pow(max(dot(normal, reflectDir), 0.0f), 2);
 		finalColor += pointColor * lightBuffer.lights[i].color.xyz * lightBuffer.lights[i].strength.x * 100.0f / pow(dist, 2);
 	}
 

@@ -10,7 +10,7 @@
 	VkResult err = x;												\
 	if (err)														\
 	{																\
-		std::cout <<"Detected Vulkan error: " << err << std::endl;	\
+		std::cout << "Detected Vulkan error: " << err << std::endl;	\
 		abort();													\
 	}																\
 }
@@ -20,18 +20,18 @@ VulkanEngine::VulkanEngine(uint32_t width, uint32_t height) {
 
 	int numOfLights = 5;
 	lights.resize(numOfLights);
-	srand(101);
+	srand(999);
 	for (int i = 0; i < numOfLights; i++){
-		lights.at(i).position = glm::vec4(rand() % 30 - 15, 5.0f, rand() % 30 - 15, 1.0f);
+		lights.at(i).position = glm::vec4(rand() % 50 - 25, rand() % 10, rand() % 50 - 25, 1.0f);
 		lights.at(i).strength = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 		int randNum = rand() % 3;
 		if (randNum == 0)
-			lights.at(i).color = glm::vec4(1, 0, 0, 1.0f);
-		else if (randNum == 1)
-			lights.at(i).color = glm::vec4(0, 1, 0, 1.0f);
-		else if (randNum == 2)
 			lights.at(i).color = glm::vec4(0, 0, 1, 1.0f);
+		else if (randNum == 1)
+			lights.at(i).color = glm::vec4(1, 0, 0, 1.0f);
+		else if (randNum == 2)
+			lights.at(i).color = glm::vec4(0, 1, 0, 1.0f);
 	}
 }
 
@@ -421,8 +421,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 	{
 		float angle = atan2(lights[i].position.x, lights[i].position.z);
 		float length = glm::length(glm::vec2(lights[i].position.x, lights[i].position.z));
-		lights[i].position.x = length * sin(angle + 0.01f);
-		lights[i].position.z = length * cos(angle + 0.01f);
+		lights[i].position.x = length * sin(angle + io->DeltaTime);
+		lights[i].position.z = length * cos(angle + io->DeltaTime);
 		lightData[i].position = lights[i].position;
 		lightData[i].color = lights[i].color;
 		lightData[i].strength = lights[i].strength;
