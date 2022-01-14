@@ -166,6 +166,7 @@ public:
 	FrameData& get_current_frame();
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	size_t pad_uniform_buffer_size(size_t originalSize);
+	size_t pad_storage_buffer_size(size_t originalSize);
 
 	void draw_objects(VkCommandBuffer cmd);
 	VkCommandBuffer beginOneTimeSubmit();

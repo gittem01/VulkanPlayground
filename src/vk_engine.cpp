@@ -24,7 +24,7 @@ VulkanEngine::VulkanEngine(uint32_t width, uint32_t height) {
 	for (int i = 0; i < numOfLights; i++){
 		lights.at(i).position = glm::vec4(rand() % 30 - 15, 5.0f, rand() % 30 - 15, 1.0f);
 		lights.at(i).strength = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		
+
 		int randNum = rand() % 3;
 		if (randNum == 0)
 			lights.at(i).color = glm::vec4(1, 0, 0, 1.0f);
@@ -415,7 +415,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 		objectData[i].objectColor = object->color;
 	}
 
-	LightData* lightData = (LightData*)(baseObjectData + pad_uniform_buffer_size(sizeof(GPUObjectData) * 10000));
+	LightData* lightData = (LightData*)(baseObjectData + pad_storage_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS));
 
 	for (int i = 0; i < lights.size(); i++)
 	{
@@ -449,7 +449,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 			uint32_t uniform_offsets[] = { uniform_offset1, uniform_offset2 };
 
 			uint32_t obj_uniform_offset1 = 0;
-			uint32_t obj_uniform_offset2 = pad_uniform_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS);
+			uint32_t obj_uniform_offset2 = pad_storage_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS);
 			uint32_t obj_uniform_offsets[] = { obj_uniform_offset1, obj_uniform_offset2 };
 
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
@@ -749,8 +749,8 @@ void VulkanEngine::init_descriptors() {
 	}
 
 	for (int i = 0; i < FRAME_OVERLAP; i++){
-		_frames[i].objectBuffer = create_buffer(pad_uniform_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS) +
-												pad_uniform_buffer_size(sizeof(LightData) * MAX_LIGHTS),
+		_frames[i].objectBuffer = create_buffer(pad_storage_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS) +
+												pad_storage_buffer_size(sizeof(LightData) * MAX_LIGHTS),
 												VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 												VMA_MEMORY_USAGE_CPU_TO_GPU);
 
@@ -790,6 +790,16 @@ size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize) {
 	size_t alignedSize = originalSize;
 	if (minUboAlignment > 0) {
 		alignedSize = (alignedSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
+	}
+	return alignedSize;
+}
+
+size_t VulkanEngine::pad_storage_buffer_size(size_t originalSize) {
+	// calculate required alignment based on minimum device offset alignment
+	size_t minStorageAlignment = _GPUProperties.limits.minStorageBufferOffsetAlignment;
+	size_t alignedSize = originalSize;
+	if (minStorageAlignment > 0) {
+		alignedSize = (alignedSize + minStorageAlignment - 1) & ~(minStorageAlignment - 1);
 	}
 	return alignedSize;
 }
