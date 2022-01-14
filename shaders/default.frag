@@ -47,7 +47,7 @@ void main()
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 512);
 	vec3 specular = spec * sceneData.sunlightColor.xyz * sceneData.sunlightColor[3] * 100;
 
-	vec3 finalColor;
+	vec3 finalColor = vec3(0, 0, 0);
 	for (int i = 0; i < sceneData.numOfLights[0]; i++){
 		vec3 lightDirection = fragWorldPos - lightBuffer.lights[i].position.xyz;
 		float dist = length(lightDirection);

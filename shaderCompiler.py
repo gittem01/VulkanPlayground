@@ -1,8 +1,9 @@
 import pathlib
 import os
-import pwd
 import time
 from sys import platform, exit
+if platform != "win32":
+    import pwd
 
 COMPDIR_FILE = "compDir.save"
 
