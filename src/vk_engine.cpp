@@ -415,7 +415,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 		objectData[i].objectColor = object->color;
 	}
 
-	LightData* lightData = (LightData*)(baseObjectData + pad_storage_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS));
+	LightData* lightData = (LightData*)(baseObjectData + pad_storage_buffer_size(sizeof(GPUObjectData)) * MAX_OBJECTS);
 
 	for (int i = 0; i < lights.size(); i++)
 	{
@@ -449,7 +449,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 			uint32_t uniform_offsets[] = { uniform_offset1, uniform_offset2 };
 
 			uint32_t obj_uniform_offset1 = 0;
-			uint32_t obj_uniform_offset2 = pad_storage_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS);
+			uint32_t obj_uniform_offset2 = pad_storage_buffer_size(sizeof(GPUObjectData)) * MAX_OBJECTS;
 			uint32_t obj_uniform_offsets[] = { obj_uniform_offset1, obj_uniform_offset2 };
 
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout,
@@ -749,8 +749,8 @@ void VulkanEngine::init_descriptors() {
 	}
 
 	for (int i = 0; i < FRAME_OVERLAP; i++){
-		_frames[i].objectBuffer = create_buffer(pad_storage_buffer_size(sizeof(GPUObjectData) * MAX_OBJECTS) +
-												pad_storage_buffer_size(sizeof(LightData) * MAX_LIGHTS),
+		_frames[i].objectBuffer = create_buffer(pad_storage_buffer_size(sizeof(GPUObjectData)) * MAX_OBJECTS +
+												pad_storage_buffer_size(sizeof(LightData)) * MAX_LIGHTS,
 												VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 												VMA_MEMORY_USAGE_CPU_TO_GPU);
 
