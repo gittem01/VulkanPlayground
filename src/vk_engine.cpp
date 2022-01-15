@@ -64,10 +64,11 @@ bool VulkanEngine::looper() {
 }
 
 ImDrawData* VulkanEngine::imguiLoop() {
-	ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::Begin("imgui window");
 	camera->isAnyWindowHovered |= ImGui::IsWindowHovered();
 	
+	ImGui::SetWindowSize(ImVec2(450, 300));
+
 	if (io->DeltaTime > 0.0f) {
 		ImGui::Text("FPS: %.1f", io->Framerate);
 	}
@@ -75,6 +76,18 @@ ImDrawData* VulkanEngine::imguiLoop() {
 		ImGui::Text("FPS: 0.0");
 	}
 	ImGui::Text("Delta Time: %.3fms", io->DeltaTime * 1000);
+
+	if (ImGui::Button("Stop")){
+		isPaused = true;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Resume")){
+		isPaused = false;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Tick")){
+		tick = true;
+	}
 
 	ImGui::Checkbox("camera keyboard movement smoothness", &camera->enableKeyPosSmth);
 	ImGui::Checkbox("camera rotation smoothness", &camera->enableRotSmth);
@@ -174,6 +187,9 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 	init_pipelines();
 
 	init_imgui();
+
+	this->isPaused = false;
+	this->tick = false;
 
 	_isInitialized = true;
 }

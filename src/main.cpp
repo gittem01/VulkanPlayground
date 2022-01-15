@@ -28,18 +28,18 @@ void createObjects(){
 		int randNum = rand() % 3;
 		if (randNum == 0){
 			g->createRenderObject("box");
-			//g->createRigidBody_Box(1.0f);
+			g->createRigidBody_Box(1.0f);
 		}
 		else if (randNum == 1){
-			g->createRenderObject("sphere_smooth");
+			g->createRenderObject("sphereSmooth");
 			g->scl = glm::vec3(g->scl.x);
-			//g->createRigidBody_Sphere(1.0f);
+			g->createRigidBody_Sphere(1.0f);
 		}
 
 		else if (randNum == 2){
 			g->createRenderObject("cylinder");
 			g->scl = glm::vec3(g->scl.x);
-			//g->createRigidBody_Cylinder(1.0f);
+			g->createRigidBody_Cylinder(1.0f);
 		}
 		
 		g->renderObject->color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -52,10 +52,11 @@ int main(int argc, char* argv[]){
 	physicsWorld = new PhysicsWorld(vkEngine);
 
 	vkEngine->get_mesh("../../assets/monkey_flat.obj", "monkey");
+	vkEngine->get_mesh("../../assets/monkey_smooth.obj", "monkeySmooth");
 	vkEngine->get_mesh("../../assets/box.obj", "box");
 	vkEngine->get_mesh("../../assets/cylinder.obj", "cylinder");
 	vkEngine->get_mesh("../../assets/sphere.obj", "sphere");
-	vkEngine->get_mesh("../../assets/sphere_smooth.obj", "sphere_smooth");
+	vkEngine->get_mesh("../../assets/sphere_smooth.obj", "sphereSmooth");
 
 	vkEngine->get_image("../../assets/monkey.png", "monkey");
 	vkEngine->get_image("../../assets/defaultTexture.png", "defaultTexture");

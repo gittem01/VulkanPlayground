@@ -19,7 +19,12 @@ void SwapChain::create(){
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
     vulkanEngine->winExtent = chooseSwapExtent(swapChainSupport.capabilities);
 
+// FPS is locked to 60 instead of 120
+#ifdef __APPLE__
+    uint32_t imageCount = swapChainSupport.capabilities.minImageCount;
+#else
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+#endif
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }

@@ -101,6 +101,9 @@ public:
 
 	bool _isInitialized = false;
 
+	bool isPaused;
+	bool tick;
+
 	float dpiScaling = 1.0f;
 
 	SwapChain* _swapChain;

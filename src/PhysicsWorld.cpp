@@ -7,6 +7,8 @@ PhysicsWorld::PhysicsWorld(VulkanEngine* engine) {
 	this->mouseJoint = NULL;
 	this->clickedObject = NULL;
 
+	this->manualSteps = 10;
+
 	this->rayMasks = btCollisionObject::CF_DYNAMIC_OBJECT | btCollisionObject::CF_KINEMATIC_OBJECT;
 
 	btVector3 v = btVector3(0, -30.0f, 0);
@@ -72,7 +74,7 @@ void PhysicsWorld::mouseClickHandle() {
 }
 
 void PhysicsWorld::loop() {
-	if (engine->io->KeysDown[SDL_SCANCODE_SPACE]) {
+	if (engine->io->KeysDown[SDL_SCANCODE_SPACE]){
 		int multiplier = 1.0f;
 		if (engine->io->KeysDown[SDL_SCANCODE_LSHIFT]) multiplier *= -1;
 		for (int i = 0; i < world->getNonStaticRigidBodies().size(); i++) {
@@ -82,19 +84,30 @@ void PhysicsWorld::loop() {
 			rb->applyCentralImpulse(force * rb->getMass() * 0.1f * multiplier);
 		}
 	}
+	if (engine->io->KeysDownDuration[SDL_SCANCODE_P] == 0.0f){
+		engine->isPaused ^= 1;
+	}
+	if (engine->io->KeysDownDuration[SDL_SCANCODE_O] == 0.0f){
+		engine->tick = true;
+		engine->isPaused = true;
+	}
 
-	if (engine->io->Framerate > 0)
-		world->stepSimulation(1.0f / engine->io->Framerate);
+	if (engine->io->Framerate > 0 && !engine->isPaused || engine->tick){
+		for (int i = 0; i < manualSteps; i++){
+			world->stepSimulation(1.0f / (engine->io->Framerate * manualSteps), !engine->tick);
+		}
+		engine->tick = false;
+	}
 
 	if (!engine->io->MouseDownOwned[0]) {
-		if (engine->io->MouseDownDuration[0] == 0.0f) {
+		if (engine->io->MouseDownDuration[0] == 0.0f){
 			mouseClickHandle();
 		}
-		else if (engine->io->MouseDownDuration[0] > 0.0f) {
+		else if (engine->io->MouseDownDuration[0] > 0.0f){
 			mouseHoldHandle();
 		}
 		
-		else if (clickedObject && !engine->io->MouseDown[0]) {
+		else if (clickedObject && !engine->io->MouseDown[0]){
 			clickedObject->renderObject->color.z = 1.0f;
 
 			if (mouseJoint)
@@ -109,11 +122,11 @@ void PhysicsWorld::loop() {
 	}
 
 	if (clickedObject) {
-		if (engine->io->KeysDownDuration[SDL_SCANCODE_Z] >= 0) {
+		if (engine->io->KeysDownDuration[SDL_SCANCODE_Z] >= 0){
 			clickDist -= 20.0f * engine->io->DeltaTime;
 			if (clickDist < 5.0f) clickDist = 5.0f;
 		}
-		if (engine->io->KeysDownDuration[SDL_SCANCODE_X] >= 0) {
+		if (engine->io->KeysDownDuration[SDL_SCANCODE_X] >= 0){
 			clickDist += 20.0f * engine->io->DeltaTime;
 		}
 		if (engine->io->MouseDownDuration[1] == 0.0f) {

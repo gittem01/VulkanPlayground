@@ -4,6 +4,9 @@
 
 class PhysicsWorld {
 public:
+
+	uint32_t manualSteps;
+
 	VulkanEngine* engine;
 	btDiscreteDynamicsWorld* world;
 
