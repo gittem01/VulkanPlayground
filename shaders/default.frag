@@ -57,5 +57,5 @@ void main()
 		finalColor += pointColor * lightBuffer.lights[i].color.xyz * lightBuffer.lights[i].strength.x * 100.0f / pow(dist, 2);
 	}
 
-	outFragColor = vec4((finalColor + ambient) * texColor, 1.0f);
+	outFragColor = vec4((finalColor + ambient) * texColor * objectColor.xyz, 1.0f);
 }

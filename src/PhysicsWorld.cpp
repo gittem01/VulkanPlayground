@@ -9,7 +9,7 @@ PhysicsWorld::PhysicsWorld(VulkanEngine* engine) {
 
 	this->rayMasks = btCollisionObject::CF_DYNAMIC_OBJECT | btCollisionObject::CF_KINEMATIC_OBJECT;
 
-	btVector3 v = btVector3(0, -9.8f, 0);
+	btVector3 v = btVector3(0, -30.0f, 0);
 	createPhysicsWorld(v);
 }
 
@@ -28,7 +28,7 @@ void PhysicsWorld::createPhysicsWorld(btVector3& gravity) {
 
 	world = new btDiscreteDynamicsWorld(dispatcher, broadphase, sol, collisionConfiguration);
 
-	world->getSolverInfo().m_numIterations = 100;
+	world->getSolverInfo().m_numIterations = 10;
 
 	world->setGravity(gravity);
 }
@@ -42,6 +42,7 @@ void PhysicsWorld::mouseHoldHandle() {
 	if (pickConstr) {
 		rayDirBt *= clickDist;
 		pickConstr->setPivotB(rayDirBt + camBtPos);
+		pickConstr->getRigidBodyA().activate(true);
 	}
 }
 
@@ -78,11 +79,12 @@ void PhysicsWorld::loop() {
 			btRigidBody* rb = world->getNonStaticRigidBodies().at(i);
 			rb->activate();
 			btVector3 force = -rb->getCenterOfMassPosition();
-			rb->applyCentralImpulse(force * rb->getMass() * 0.05f * multiplier);
+			rb->applyCentralImpulse(force * rb->getMass() * 0.1f * multiplier);
 		}
 	}
 
-	world->stepSimulation(engine->io->DeltaTime);
+	if (engine->io->Framerate > 0)
+		world->stepSimulation(1.0f / engine->io->Framerate);
 
 	if (!engine->io->MouseDownOwned[0]) {
 		if (engine->io->MouseDownDuration[0] == 0.0f) {

@@ -31,7 +31,7 @@ VulkanEngine::VulkanEngine(uint32_t width, uint32_t height) {
 		else if (randNum == 1)
 			lights.at(i).color = glm::vec4(1, 0, 0, 1.0f);
 		else if (randNum == 2)
-			lights.at(i).color = glm::vec4(0, 1, 0, 1.0f);
+			lights.at(i).color = glm::vec4(1, 1, 0, 1.0f);
 	}
 }
 
