@@ -64,6 +64,7 @@ bool VulkanEngine::looper() {
 }
 
 ImDrawData* VulkanEngine::imguiLoop() {
+	ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::Begin("imgui window");
 	camera->isAnyWindowHovered |= ImGui::IsWindowHovered();
 	
