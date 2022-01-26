@@ -158,12 +158,8 @@ void VulkanEngine::init(uint32_t width, uint32_t height) {
 		winExtent.width, winExtent.height,
 		window_flags
 	);
-
-	int x1, y1, x2, y2;
-	SDL_GetWindowSize(window, &x1, &y1);
-	SDL_GL_GetDrawableSize(window, &x2, &y2);
-
-	dpiScaling = x2 / x1;
+	
+	SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), &dpiScaling, NULL, NULL);
 
 	camera = new Camera3D(glm::vec3(-10.0f, 10.0f, 10.0f), (void*)this);
 	camera->rot.x = glm::pi<float>() / 4.0f;
