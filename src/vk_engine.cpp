@@ -4,8 +4,6 @@
 #include "vk_engine.h"
 #include <string>
 
-#define ENABLE_VALIDATION 1
-
 #define VK_CHECK(x) {												\
 	VkResult err = x;												\
 	if (err)														\
@@ -289,10 +287,6 @@ void VulkanEngine::cleanup() {
 
 		vmaDestroyAllocator(_allocator);
 
-#if ENABLE_VALIDATION
-		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
-#endif
-
 		vkDestroySurfaceKHR(_instance, _surface, NULL);
 
 		vkDestroyDevice(_device, NULL);
@@ -488,68 +482,162 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd) {
 	}
 }
 
-void VulkanEngine::init_vulkan() {
-	vkb::InstanceBuilder builder;
+void VulkanEngine::init_instance(){
+	VkApplicationInfo appInfo = {};
+	appInfo.apiVersion = VK_API_VERSION_1_2;
+	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.pApplicationName = "Vulkan Engine";
+	appInfo.pEngineName = "Vulkan Engine";
 
-	auto inst_ret = builder
-		.set_app_name("AppX")
-		.request_validation_layers(ENABLE_VALIDATION)
-#ifdef __APPLE__
-		.enable_extension("VK_MVK_macos_surface")
-#endif
-		.require_api_version(1, 2, 0);
+	uint32_t SDLExtensionCount = 0;
+	SDL_Vulkan_GetInstanceExtensions(window, &SDLExtensionCount, NULL);
+	_requiredExtensions.resize(SDLExtensionCount);
+	SDL_Vulkan_GetInstanceExtensions(window, &SDLExtensionCount, _requiredExtensions.data());
 
-#if ENABLE_VALIDATION
-	printf("Validation layers are enabled\n\n");
-	inst_ret = inst_ret.use_default_debug_messenger();
-#else
-	printf("Validation layers are disabled\n\n");
-#endif
+	uint32_t extensionCount = 0;
+	vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, NULL);
+	VkExtensionProperties* instanceExtensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * extensionCount);
+	vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, instanceExtensions);
 
-	vkb::Instance vkb_inst = inst_ret.build().value();
+	free(instanceExtensions);
 
-	_instance = vkb_inst.instance;
+	VkInstanceCreateInfo instanceCreateInfo = {};
+	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	instanceCreateInfo.pApplicationInfo = &appInfo;
+	instanceCreateInfo.enabledExtensionCount = _requiredExtensions.size();
+	instanceCreateInfo.ppEnabledExtensionNames = _requiredExtensions.data();
+	instanceCreateInfo.enabledLayerCount = 0;
+	instanceCreateInfo.ppEnabledLayerNames = NULL;
 
-#if ENABLE_VALIDATION
-	_debug_messenger = vkb_inst.debug_messenger;
-	inst_ret = inst_ret.use_default_debug_messenger();
-#else
-	_debug_messenger = NULL;
-#endif
-	
-	SDL_Vulkan_CreateSurface(window, _instance, &_surface);
+	VK_CHECK(vkCreateInstance(&instanceCreateInfo, NULL, &_instance));
+}
 
-	VkPhysicalDeviceFeatures features = {};
-#ifndef __APPLE__
-	features.wideLines = VK_TRUE;
-	features.fillModeNonSolid = VK_TRUE;
-#endif
+bool VulkanEngine::is_device_suitable(VkPhysicalDevice physicalDevice){
+	VkPhysicalDeviceProperties deviceProperties;
+	vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+
+	VkPhysicalDeviceFeatures deviceFeatures;
+	vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+
+	VkSurfaceCapabilitiesKHR surfaceCapabilities;
+	VkSurfaceFormatKHR* surfaceFormats;
+	VkPresentModeKHR* presentModes;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, _surface, &surfaceCapabilities);
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, _surface, &formatCount, nullptr);
+	if (formatCount != 0) {
+		surfaceFormats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, _surface, &formatCount, surfaceFormats);
+	}
+
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, _surface, &presentModeCount, nullptr);
+	if (presentModeCount != 0) {
+		presentModes = (VkPresentModeKHR*)malloc(sizeof(VkPresentModeKHR) * presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, _surface, &presentModeCount, presentModes);
+	}
+
+	// free allocations
+	free(surfaceFormats);
+	free(presentModes);
+
+	return presentModeCount != 0 && formatCount != 0;
+}
+
+void VulkanEngine::select_physical_device() {
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(_instance, &deviceCount, NULL);
+	if (deviceCount == 0) {
+		throw std::runtime_error("failed to find GPUs with Vulkan support!");
+	}
+	VkPhysicalDevice* devices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * deviceCount);
+
+	vkEnumeratePhysicalDevices(_instance, &deviceCount, devices);
+
+	_chosenGPU = VK_NULL_HANDLE;
+
+	for (uint32_t i = 0; i < deviceCount; i++) {
+		VkPhysicalDeviceProperties deviceProperties;
+		vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, NULL);
+		VkQueueFamilyProperties* queueFamilies = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, queueFamilies);
+
+		if (is_device_suitable(devices[i])){
+			for (uint32_t j = 0; j < queueFamilyCount; j++) {
+				VkBool32 presentSupported;
+				vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, _surface, &presentSupported);
+				if (queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT && presentSupported) {
+					_chosenGPU = devices[i];
+					_graphicsQueueFamily = j;
+					i = deviceCount;
+					break;
+				}
+			}
+		}
+		free(queueFamilies);
+	}
+	free(devices);
+
+	if (_chosenGPU == VK_NULL_HANDLE) {
+		throw std::runtime_error("failed to find a suitable GPU!");
+	}
+}
+
+void VulkanEngine::create_logical_device(){
+	VkDeviceQueueCreateInfo queueCreateInfo = {};
+	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo.queueFamilyIndex = _graphicsQueueFamily;
+	queueCreateInfo.queueCount = 1;
+	float queuePriority = 1.0f;
+	queueCreateInfo.pQueuePriorities = &queuePriority;
+
+	VkPhysicalDeviceFeatures deviceFeatures = {};
+	vkGetPhysicalDeviceFeatures(_chosenGPU, &deviceFeatures);
+
+
+	uint32_t extensionPropertyCount;
+	vkEnumerateDeviceExtensionProperties(_chosenGPU, NULL, &extensionPropertyCount, NULL);
+	VkExtensionProperties* extensionProperties = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * extensionPropertyCount);
+	vkEnumerateDeviceExtensionProperties(_chosenGPU, NULL, &extensionPropertyCount, extensionProperties);
+	for (uint32_t i = 0; i < extensionPropertyCount; i++) {
+		if (strcmp(extensionProperties[i].extensionName, "VK_KHR_portability_subset") == 0){
+			_deviceExtensions.push_back("VK_KHR_portability_subset");
+		}
+	}
+
 	VkPhysicalDeviceVulkan11Features features11 = {};
+	features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 	features11.shaderDrawParameters = VK_TRUE;
 
-	vkb::PhysicalDeviceSelector selector = vkb::PhysicalDeviceSelector(vkb_inst);
-	selector = selector.set_minimum_version(1, 0)
-		.set_required_features(features)
-		.set_required_features_11(features11);
-	
-	selector = selector.set_surface(_surface);
+	VkDeviceCreateInfo deviceCreateInfo = {};
+	deviceCreateInfo.pNext = &features11;
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+	deviceCreateInfo.queueCreateInfoCount = 1;
+	deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+	deviceCreateInfo.enabledExtensionCount = _deviceExtensions.size();
+	deviceCreateInfo.ppEnabledExtensionNames = _deviceExtensions.data();
 
-	vkb::PhysicalDevice physicalDevice = selector.select().value();
+	VK_CHECK(vkCreateDevice(_chosenGPU, &deviceCreateInfo, NULL, &_device));
 
-	// .prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
+	vkGetDeviceQueue(_device, _graphicsQueueFamily, 0, &_graphicsQueue);
+}
 
-	vkb::DeviceBuilder deviceBuilder = vkb::DeviceBuilder(physicalDevice);
+void VulkanEngine::init_vulkan() {
+	init_instance();
 
-	vkb::Device vkbDevice = deviceBuilder.build().value();
+	SDL_Vulkan_CreateSurface(window, _instance, &_surface);
 
-	_device = vkbDevice.device;
-	_chosenGPU = physicalDevice.physical_device;
+	select_physical_device();
+	create_logical_device();
 
 	vkGetPhysicalDeviceProperties(_chosenGPU, &_GPUProperties);
 	std::cout << "Selected GPU: " << _GPUProperties.deviceName << "\n\n";
-
-	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
 	VmaAllocatorCreateInfo allocatorInfo = {};
 	allocatorInfo.physicalDevice = _chosenGPU;

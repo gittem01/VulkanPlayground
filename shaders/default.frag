@@ -26,12 +26,12 @@ layout(set = 0, binding = 1) uniform  SceneData{
 
 layout(set = 2, binding = 0) uniform sampler2D tex1;
 
-// all object matrices
+// all light datas
 layout(std140, set = 1, binding = 1) readonly buffer LightBuffer {
 	LightData lights[];
 } lightBuffer;
 
-float ambientRatio = 0.01f;
+float ambientRatio = 0.00f;
 float brightness = 0.50f;
 
 void main() 
@@ -51,10 +51,12 @@ void main()
 	for (int i = 0; i < sceneData.numOfLights[0]; i++){
 		vec3 lightDirection = fragWorldPos - lightBuffer.lights[i].position.xyz;
 		float dist = length(lightDirection);
+		vec3 pLightAmbient = lightBuffer.lights[i].color.xyz / pow(dist, 2);
 		vec3 reflectDir = normalize(reflect(lightDirection, nNormal));
 		float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
 		float pointColor = spec + pow(max(dot(normal, reflectDir), 0.0f), 2);
-		finalColor += pointColor * lightBuffer.lights[i].color.xyz * lightBuffer.lights[i].strength.x * 100.0f / pow(dist, 2);
+		finalColor += pointColor * lightBuffer.lights[i].color.xyz * lightBuffer.lights[i].strength.x * 200.0f / pow(dist, 2);
+		finalColor += pLightAmbient * 3;
 	}
 
 	outFragColor = vec4((finalColor + ambient) * texColor * objectColor.xyz, 1.0f);

@@ -193,9 +193,18 @@ private:
 	const int MAX_OBJECTS = 10000;
 	const int MAX_LIGHTS = 100;
 
+	std::vector<const char*> _requiredExtensions;
+	std::vector<const char*> _deviceExtensions = {
+    	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	};
+
 	void windowResizeEvent();
 	int eventHandler();
 
+	void init_instance();
+	bool is_device_suitable(VkPhysicalDevice physicalDevice);
+	void select_physical_device();
+	void create_logical_device();
 	void init_vulkan();
 	void init_commands();
 	void init_default_renderpass();

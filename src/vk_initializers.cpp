@@ -25,15 +25,11 @@ VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(VkCommandPool p
 
 VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule) {
 
-	VkPipelineShaderStageCreateInfo info{};
+	VkPipelineShaderStageCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	info.pNext = NULL;
 
-	//shader stage
 	info.stage = stage;
-	//module containing the code for this shader stage
 	info.module = shaderModule;
-	//the entry point of the shader
 	info.pName = "main";
 	return info;
 }
@@ -116,7 +112,7 @@ VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
 }
 
 VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
-	VkPipelineLayoutCreateInfo info{};
+	VkPipelineLayoutCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	info.pNext = NULL;
 
@@ -130,7 +126,7 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 
 VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent, VkSampleCountFlagBits samples)
 {
-	VkImageCreateInfo info = { };
+	VkImageCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	info.pNext = NULL;
 
