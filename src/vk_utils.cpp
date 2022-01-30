@@ -1,9 +1,7 @@
 #include "vk_engine.h"
 
-bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outImage)
+bool VulkanEngine::load_image(std::string fileName, AllocatedImage& outImage)
 {
-	VulkanEngine* vulkanEngine = reinterpret_cast<VulkanEngine*>(engine);
-
 	int width, height, nChannels;
 	stbi_uc* pixels = stbi_load(fileName.c_str(), &width, &height, &nChannels, STBI_rgb_alpha);
 
@@ -16,14 +14,14 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 
 	VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
 
-	AllocatedBuffer stagingBuffer = vulkanEngine->create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+	AllocatedBuffer stagingBuffer = create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	void* data;
-	vmaMapMemory(vulkanEngine->_allocator, stagingBuffer._allocation, &data);
+	vmaMapMemory(getAllocator(), stagingBuffer._allocation, &data);
 
 	memcpy(data, (void*)pixels, static_cast<size_t>(imageSize));
 
-	vmaUnmapMemory(vulkanEngine->_allocator, stagingBuffer._allocation);
+	vmaUnmapMemory(getAllocator(), stagingBuffer._allocation);
 	stbi_image_free(pixels);
 
 	VkExtent3D imageExtent;
@@ -39,11 +37,11 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-	vmaCreateImage(vulkanEngine->_allocator, &dimg_info, &dimg_allocinfo, &newImage._image, &newImage._allocation, NULL);
+	vmaCreateImage(getAllocator(), &dimg_info, &dimg_allocinfo, &newImage._image, &newImage._allocation, NULL);
 	
 	// one time submit start
-	VkCommandBuffer commandBuffer = vulkanEngine->beginOneTimeSubmit();
-	VkImageMemoryBarrier imageBarrier_toTransfer = vkutil::insertImageMemoryBarrier(commandBuffer, newImage._image, 0,
+	VkCommandBuffer commandBuffer = beginOneTimeSubmit();
+	VkImageMemoryBarrier imageBarrier_toTransfer = insertImageMemoryBarrier(commandBuffer, newImage._image, 0,
 		VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
@@ -72,10 +70,10 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
 		NULL, 0, NULL, 1, &imageBarrier_toReadable);
-	vulkanEngine->endOneTimeSubmit(commandBuffer);
+	endOneTimeSubmit(commandBuffer);
 	// one time submit end
 
-	vmaDestroyBuffer(vulkanEngine->_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+	vmaDestroyBuffer(getAllocator(), stagingBuffer._buffer, stagingBuffer._allocation);
 
 	std::cout << "Texture file: " << fileName << " loaded successfully " << std::endl;
 
@@ -84,7 +82,7 @@ bool vkutil::load_image(void* engine, std::string fileName, AllocatedImage& outI
 	return true;
 }
 
-VkImageMemoryBarrier vkutil::insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
+VkImageMemoryBarrier VulkanEngine::insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
 	VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
 	VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkImageSubresourceRange subresourceRange)
 {
@@ -102,4 +100,78 @@ VkImageMemoryBarrier vkutil::insertImageMemoryBarrier(VkCommandBuffer cmdbuffer,
 	vkCmdPipelineBarrier(cmdbuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
 
 	return imageMemoryBarrier;
+}
+
+VkCommandBuffer VulkanEngine::beginOneTimeSubmit() {
+	VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(_uploadContext._commandPool, 1);
+	VkCommandBuffer cmdBuffer;
+	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &cmdBuffer));
+
+	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &cmdBeginInfo));
+
+	return cmdBuffer;
+}
+
+void VulkanEngine::endOneTimeSubmit(VkCommandBuffer cmdBuffer) {
+	VK_CHECK(vkEndCommandBuffer(cmdBuffer));
+
+	VkSubmitInfo submit = vkinit::submit_info(&cmdBuffer);
+	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _uploadContext._uploadFence));
+
+	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, true, UINT64_MAX);
+	vkResetFences(_device, 1, &_uploadContext._uploadFence);
+	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
+}
+
+
+void VulkanEngine::upload_mesh(Mesh& mesh) {
+	const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
+	// allocate staging buffer
+	VkBufferCreateInfo stagingBufferInfo = {};
+	stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	stagingBufferInfo.pNext = NULL;
+
+	stagingBufferInfo.size = bufferSize;
+	stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+	VmaAllocationCreateInfo vmaallocInfo = {};
+	vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+
+	AllocatedBuffer stagingBuffer;
+
+	// allocate the buffer
+	VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo,
+		&stagingBuffer._buffer, &stagingBuffer._allocation, NULL)
+	);
+
+	void* data;
+	vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
+
+	memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+
+	vmaUnmapMemory(_allocator, stagingBuffer._allocation);
+
+	VkBufferCreateInfo vertexBufferInfo = {};
+	vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	vertexBufferInfo.pNext = NULL;
+	vertexBufferInfo.size = bufferSize;
+	vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+	vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	// allocate the buffer
+	VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo,
+		&mesh._vertexBuffer._buffer, &mesh._vertexBuffer._allocation, NULL)
+	);
+
+	VkCommandBuffer commandBuffer = beginOneTimeSubmit();
+	VkBufferCopy copy;
+	copy.dstOffset = 0;
+	copy.srcOffset = 0;
+	copy.size = bufferSize;
+	vkCmdCopyBuffer(commandBuffer, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
+	endOneTimeSubmit(commandBuffer);
+
+	vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }

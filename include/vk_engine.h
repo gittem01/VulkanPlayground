@@ -11,7 +11,6 @@
 #include "glm/glm.hpp"
 #include "vk_swapchain.h"
 #include "vk_pipelinebuilder.h"
-#include "vk_utils.h"
 #include "stb_image.h"
 #include "SDL.h"
 #include "SDL_vulkan.h"
@@ -27,6 +26,15 @@
 #include <unordered_map>
 #include <vector>
 #include <math.h>
+
+#define VK_CHECK(x) {												\
+	VkResult err = x;												\
+	if (err)														\
+	{																\
+		std::cout << "Detected Vulkan error: " << err << std::endl;	\
+		abort();													\
+	}																\
+}
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
@@ -89,7 +97,41 @@ struct FrameData {
 };
 
 class VulkanEngine {
+
+friend class GameObject;
+friend class SwapChain;
+
 public:
+
+	SDL_Window* window;
+	VkExtent2D winExtent;
+	ImGuiIO* io;
+	Camera3D* camera;
+
+	uint32_t frameNumber;
+
+
+	bool isPaused;
+	bool tick;
+
+	float dpiScaling = 1.0f;
+
+	VulkanEngine(uint32_t width, uint32_t height);
+	~VulkanEngine();
+
+	void get_mesh(std::string meshPath, const char* meshName);
+	void get_image(std::string imagePath, const char* imageName, VkFilter filter = VK_FILTER_LINEAR);
+
+	// Create material and add it to the map
+	Material* create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
+	Material* get_material(const std::string& name);
+
+	VmaAllocator getAllocator(){return _allocator; }
+
+	// main loop
+	bool looper();
+
+private:
 	std::vector<GameObject*> gameObjects;
 	
 	std::unordered_map<std::string, Texture> _loadedTextures;
@@ -98,20 +140,17 @@ public:
 
 	std::vector<LightData> lights;
 
+	const int MAX_OBJECTS = 10000;
+	const int MAX_LIGHTS = 100;
+
+	std::vector<const char*> _requiredExtensions;
+	std::vector<const char*> _deviceExtensions = {
+    	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	};
+
 	bool _isInitialized = false;
 
-	bool isPaused;
-	bool tick;
-
-	float dpiScaling = 1.0f;
-
 	SwapChain* _swapChain;
-
-	SDL_Window* window;
-	VkExtent2D winExtent;
-	ImGuiIO* io;
-
-	uint32_t frameNumber;
 
 	uint32_t lastSwapchainImageIndex;
 
@@ -152,23 +191,12 @@ public:
 
 	UploadContext _uploadContext;
 
-	Camera3D* camera;
-
-	VulkanEngine(uint32_t width, uint32_t height);
-	~VulkanEngine();
-
-	void get_mesh(std::string meshPath, const char* meshName);
-	void get_image(std::string imagePath, const char* imageName, VkFilter filter = VK_FILTER_LINEAR);
-
-	// Create material and add it to the map
-	Material* create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
-	Material* get_material(const std::string& name);
-	Mesh* get_mesh(const std::string& name);
-
 	FrameData& get_current_frame();
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	size_t pad_uniform_buffer_size(size_t originalSize);
 	size_t pad_storage_buffer_size(size_t originalSize);
+
+	Mesh* get_mesh(const std::string& name);
 
 	void draw_objects(VkCommandBuffer cmd);
 	VkCommandBuffer beginOneTimeSubmit();
@@ -184,18 +212,6 @@ public:
 	// render loop
 	void render(ImDrawData* draw_data);
 	ImDrawData* imguiLoop();
-
-	// main loop
-	bool looper();
-
-private:
-	const int MAX_OBJECTS = 10000;
-	const int MAX_LIGHTS = 100;
-
-	std::vector<const char*> _requiredExtensions;
-	std::vector<const char*> _deviceExtensions = {
-    	VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
 
 	void windowResizeEvent();
 	int eventHandler();
@@ -214,4 +230,9 @@ private:
 	void update_image_descriptors(Texture* tex);
 
 	void upload_mesh(Mesh& mesh);
+	bool load_image(std::string fileName, AllocatedImage& outImage);
+
+	VkImageMemoryBarrier insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
+		VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
+		VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkImageSubresourceRange subresourceRange);
 };
